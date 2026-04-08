@@ -126,7 +126,7 @@
 <div class="hero">
     <img src="logo.png" alt="WINQ-EMU">
     <h1>WINQ<span>-</span>EMU</h1>
-    <p class="tagline">The world's first Venus Vulkan GPU forwarding on Windows.</p>
+    <p class="tagline">Venus Vulkan GPU forwarding for QEMU on Windows.</p>
     <p class="tagline" style="font-size:1em; color:#6e7681; margin-bottom: 20px;">
         Run Linux VMs with real GPU acceleration. No more software rendering. No more excuses.
     </p>
@@ -141,9 +141,10 @@
     <div class="section">
         <h2>What is <span>this thing</span>?</h2>
         <p style="text-align:center; color:#8b949e; max-width:700px; margin:0 auto 10px;">
-            WINQ-EMU is an optimized QEMU build for Windows that does something nobody else has done:
-            it connects your Linux VM directly to your host GPU using the Venus Vulkan protocol.
+            WINQ-EMU is an optimized QEMU build for Windows that connects your Linux VM
+            directly to your host GPU using the Venus Vulkan protocol.
             Your VM gets real hardware-accelerated Vulkan. On Windows. Without WSL.
+            It also fixes WHPX to support <code>-cpu host</code>, which upstream QEMU doesn't do yet.
         </p>
         <p style="text-align:center; color:#6e7681; font-size:0.9em;">
             Yes, we were surprised it worked too.

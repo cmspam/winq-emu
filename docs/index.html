@@ -150,11 +150,12 @@
     <div class="section">
         <h2>What is <span>this thing</span>?</h2>
         <p style="text-align:center; color:#8b949e; max-width:700px; margin:0 auto 10px;">
-            WINQ-EMU is the ultimate way to run a full graphical Linux desktop on Windows.
+            WINQ-EMU is a modified build of QEMU and virglrenderer that enables features
+            missing from upstream on Windows: Venus Vulkan GPU forwarding, WHPX
+            <code>-cpu host</code> passthrough, and optimized display refresh.
             Unlike WSL, you get a complete desktop environment. Unlike other VM software,
             you get real Vulkan GPU acceleration. Your Linux VM connects directly to your
             host GPU through the Venus protocol &mdash; no software rendering, no compromises.
-            It also fixes WHPX to support <code>-cpu host</code>, which upstream QEMU doesn't do yet.
         </p>
         <p style="text-align:center; color:#6e7681; font-size:0.9em;">
             (But honestly, you should probably just switch to Linux. QEMU is even better there.)

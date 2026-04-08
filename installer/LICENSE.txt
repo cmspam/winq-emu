@@ -1,0 +1,44 @@
+QEMU Venus - License Information
+=================================
+
+This distribution bundles the following software:
+
+QEMU (https://www.qemu.org/)
+  License: GNU General Public License version 2 (GPL-2.0)
+  With patches for: WHPX -cpu host passthrough, Venus virtio-gpu,
+  120Hz EDID default refresh rate.
+
+virglrenderer (https://gitlab.freedesktop.org/virgl/virglrenderer)
+  License: MIT License
+  With patches for: Windows Venus port, Win32 external memory shim,
+  Intel driver push descriptor workaround, deferred object destruction.
+
+Runtime libraries from MSYS2/UCRT64 (https://www.msys2.org/)
+  Various open-source licenses (see individual library documentation).
+
+Full source code and patches are available at the project repository.
+
+================================================================================
+
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 2, June 1991
+
+ Copyright (C) 1989, 1991 Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The licenses for most software are designed to take away your
+freedom to share and change it.  By contrast, the GNU General Public
+License is intended to guarantee your freedom to share and change free
+software--to make sure the software is free for all its users.  This
+General Public License applies to most of the Free Software
+Foundation's software and to any other program whose authors commit to
+using it.  (Some other Free Software Foundation software is covered by
+the GNU Lesser General Public License instead.)  You can apply it to
+your programs, too.
+
+  For the full text of the GPL-2.0, see:
+  https://www.gnu.org/licenses/old-licenses/gpl-2.0.html

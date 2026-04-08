@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WINQ-EMU - Vulkan GPU Acceleration for QEMU on Windows</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .hero {
+            text-align: center;
+            padding: 80px 20px 60px;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1e2e 100%);
+        }
+        .hero img { width: 140px; height: 140px; margin-bottom: 24px; }
+        .hero h1 { font-size: 3.2em; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+        .hero h1 span { color: #58a6ff; }
+        .hero .tagline {
+            font-size: 1.3em; color: #8b949e; max-width: 650px; margin: 0 auto 12px;
+        }
+        .hero .brag {
+            display: inline-block; background: #1f6feb22; border: 1px solid #1f6feb44;
+            border-radius: 20px; padding: 6px 18px; font-size: 0.95em; color: #58a6ff;
+            margin-bottom: 30px;
+        }
+        .buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+        .btn {
+            display: inline-block; padding: 14px 32px; border-radius: 8px;
+            font-size: 1.05em; font-weight: 600; transition: all 0.2s;
+        }
+        .btn-primary { background: #238636; color: white; }
+        .btn-primary:hover { background: #2ea043; text-decoration: none; }
+        .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; text-decoration: none; }
+        .btn-donate { background: #da3633; color: white; }
+        .btn-donate:hover { background: #f85149; text-decoration: none; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+        .section { padding: 60px 0; }
+        .section h2 {
+            font-size: 2em; margin-bottom: 24px; text-align: center;
+        }
+        .section h2 span { color: #58a6ff; }
+
+        .features {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px; margin-top: 30px;
+        }
+        .feature {
+            background: #161b22; border: 1px solid #21262d; border-radius: 12px;
+            padding: 28px; transition: border-color 0.2s;
+        }
+        .feature:hover { border-color: #58a6ff44; }
+        .feature h3 { font-size: 1.15em; margin-bottom: 8px; color: #f0f6fc; }
+        .feature p { color: #8b949e; font-size: 0.95em; }
+
+        .perf-table {
+            margin: 30px auto; border-collapse: collapse; width: 100%; max-width: 500px;
+        }
+        .perf-table th, .perf-table td {
+            padding: 14px 20px; text-align: left; border-bottom: 1px solid #21262d;
+        }
+        .perf-table th { color: #8b949e; font-weight: 600; font-size: 0.9em; text-transform: uppercase; }
+        .perf-table .winner { color: #3fb950; font-weight: 700; font-size: 1.2em; }
+
+        .steps {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-top: 30px; text-align: center;
+        }
+        .step {
+            background: #161b22; border-radius: 12px; padding: 30px 20px;
+            border: 1px solid #21262d;
+        }
+        .step .num {
+            display: inline-block; width: 40px; height: 40px; line-height: 40px;
+            border-radius: 50%; background: #1f6feb; font-weight: 700; margin-bottom: 12px;
+        }
+        .step h4 { margin-bottom: 6px; }
+        .step p { color: #8b949e; font-size: 0.9em; }
+
+        .alpha-warning {
+            background: #f8514922; border: 1px solid #f8514944; border-radius: 12px;
+            padding: 24px 30px; margin: 40px 0; text-align: center;
+        }
+        .alpha-warning h3 { color: #f85149; margin-bottom: 6px; }
+        .alpha-warning p { color: #8b949e; }
+
+        .graphics-guide {
+            background: #161b22; border: 1px solid #21262d; border-radius: 12px;
+            padding: 28px; margin-top: 30px;
+        }
+        .graphics-guide h3 { margin-bottom: 4px; }
+        .graphics-guide p { color: #8b949e; margin-bottom: 16px; }
+        .graphics-guide .warn { color: #d29922; }
+
+        .donate-section {
+            text-align: center; padding: 60px 0;
+            background: linear-gradient(135deg, #161b22 0%, #1a1e2e 100%);
+        }
+        .donate-section h2 { margin-bottom: 12px; }
+        .donate-section p { color: #8b949e; max-width: 550px; margin: 0 auto 24px; font-size: 1.05em; }
+
+        .footer {
+            text-align: center; padding: 30px; color: #484f58; font-size: 0.85em;
+            border-top: 1px solid #21262d;
+        }
+        .footer a { color: #484f58; }
+
+        code {
+            background: #1f232a; padding: 2px 8px; border-radius: 4px;
+            font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <img src="logo.png" alt="WINQ-EMU">
+    <h1>WINQ<span>-</span>EMU</h1>
+    <p class="tagline">Venus Vulkan GPU forwarding for QEMU on Windows.</p>
+    <p class="tagline" style="font-size:1em; color:#6e7681; margin-bottom: 20px;">
+        Run Linux VMs with real GPU acceleration. No more software rendering. No more excuses.
+    </p>
+    <div class="brag">~2x faster Vulkan than WSL &mdash; 410 vs 226 FPS in SuperTuxKart</div>
+    <div class="buttons">
+        <a href="https://github.com/cmspam/winq-emu/releases" class="btn btn-primary">Download Alpha 1</a>
+        <a href="https://github.com/cmspam/winq-emu" class="btn btn-secondary">View on GitHub</a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section">
+        <h2>What is <span>this thing</span>?</h2>
+        <p style="text-align:center; color:#8b949e; max-width:700px; margin:0 auto 10px;">
+            WINQ-EMU is an optimized QEMU build for Windows that connects your Linux VM
+            directly to your host GPU using the Venus Vulkan protocol.
+            Your VM gets real hardware-accelerated Vulkan. On Windows. Without WSL.
+            It also fixes WHPX to support <code>-cpu host</code>, which upstream QEMU doesn't do yet.
+        </p>
+        <p style="text-align:center; color:#6e7681; font-size:0.9em;">
+            Yes, I was surprised it worked too.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>Venus Vulkan Forwarding</h3>
+                <p>Linux guest apps talk Vulkan to your real GPU through the Venus protocol. Hardware raytracing, compute shaders, the works. Well, mostly the works. It's alpha.</p>
+            </div>
+            <div class="feature">
+                <h3>-cpu host Passthrough</h3>
+                <p>Full CPUID passthrough via WHPX. Your guest sees your actual CPU &mdash; AVX-512, hybrid cores, whatever fancy silicon you've got.</p>
+            </div>
+            <div class="feature">
+                <h3>One-Click Setup</h3>
+                <p>Installer bundles everything. Graphical launcher builds the QEMU command for you. Your grandma could almost use this. Almost.</p>
+            </div>
+            <div class="feature">
+                <h3>Virtio Everything</h3>
+                <p>GPU, sound, network &mdash; all virtio. Because paravirtualization is the way. virgl handles OpenGL, Venus handles Vulkan, you handle the snacks.</p>
+            </div>
+            <div class="feature">
+                <h3>Blob Resources</h3>
+                <p>Zero-copy shared memory between host and guest GPU. Your pixels take the express lane.</p>
+            </div>
+            <div class="feature">
+                <h3>Open Source, Obviously</h3>
+                <p>All patches are minimal and clean. Fork it, upstream it, frame it and hang it on your wall. I don't mind.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Performance that <span>actually slaps</span></h2>
+        <p style="text-align:center; color:#8b949e; margin-bottom:10px;">
+            SuperTuxKart, Vulkan renderer, default settings. CachyOS on both. Real numbers.
+        </p>
+        <table class="perf-table">
+            <tr><th>Platform</th><th>FPS</th><th></th></tr>
+            <tr><td>WINQ-EMU (Venus)</td><td class="winner">410 fps</td><td>&#x1F451;</td></tr>
+            <tr><td>WSL2 (CachyOS)</td><td>226 fps</td><td></td></tr>
+        </table>
+        <p style="text-align:center; color:#6e7681; font-size:0.85em; margin-top:12px;">
+            Nearly 2x faster than WSL. Your mileage may vary. But it'll probably be good mileage.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Getting <span>started</span></h2>
+        <div class="steps">
+            <div class="step">
+                <div class="num">1</div>
+                <h4>Install</h4>
+                <p>Run the installer. Click next a few times. You know the drill.</p>
+            </div>
+            <div class="step">
+                <div class="num">2</div>
+                <h4>Add a VM</h4>
+                <p>Drop a Linux qcow2 image into the <code>vm</code> folder, or create one in the launcher.</p>
+            </div>
+            <div class="step">
+                <div class="num">3</div>
+                <h4>Launch</h4>
+                <p>Open WINQ-EMU, pick your settings, hit Launch. That's it.</p>
+            </div>
+        </div>
+
+        <div class="alpha-warning">
+            <h3>Alpha 1 &mdash; Here Be Dragons</h3>
+            <p>This is an alpha release. Things might crash. Things might look weird.
+            Your cat might judge you. I'm working on it. But honestly? It's already pretty solid
+            for an alpha. I'm just covering my bases here.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Graphics <span>cheat sheet</span></h2>
+        <div class="graphics-guide">
+            <h3>Vulkan (Venus)</h3>
+            <p>Works everywhere &mdash; Wayland and X11. Just run your Vulkan apps. They'll find the GPU.</p>
+
+            <h3>OpenGL (virgl)</h3>
+            <p>Works everywhere too. Your desktop compositor uses this by default. It just works&trade;.</p>
+
+            <h3>OpenGL via Zink</h3>
+            <p>Translates GL to Vulkan for potentially better perf. <span class="warn">X11/XWayland only</span> &mdash;
+            native Wayland clients won't display. Set <code>MESA_LOADER_DRIVER_OVERRIDE=zink</code> to try it.</p>
+
+            <h3 class="warn">Use BIOS boot, not EFI</h3>
+            <p>EFI boot causes a timing issue that tanks Vulkan to ~5 FPS. Stick with BIOS. I'm looking into it.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Requirements</h2>
+        <div class="features" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="feature">
+                <h3>Windows</h3>
+                <p>Windows 10 or 11 with "Windows Hypervisor Platform" enabled in Windows Features.</p>
+            </div>
+            <div class="feature">
+                <h3>GPU</h3>
+                <p>Any GPU with Vulkan drivers. Intel, AMD, NVIDIA &mdash; I don't discriminate.</p>
+            </div>
+            <div class="feature">
+                <h3>Linux Guest</h3>
+                <p>A distro with Mesa 24.0+. Fedora 40+, Ubuntu 24.04+, Arch, CachyOS, etc.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="donate-section">
+    <div class="container">
+        <h2>Fund the <span>vibe coding</span></h2>
+        <p>
+            This project was built on vibes, caffeine, and an mass of mass-produced tokens.
+            If WINQ-EMU saved you from the horrors of software rendering,
+            consider tossing a few bucks my way. It helps fund more questionable engineering decisions.
+        </p>
+        <a href="https://paypal.me/cmsp" class="btn btn-donate">Donate via PayPal</a>
+        <p style="font-size:0.85em; margin-top:16px; color:#484f58;">
+            100% of donations go directly to energy drinks and GPU drivers that probably have bugs in them.
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section" style="text-align:center;">
+        <h2>Source <span>code</span></h2>
+        <p style="color:#8b949e; margin-bottom:20px;">
+            Everything is open source. The patches are intentionally minimal for easy upstreaming.
+            If you want to merge any of this into the upstream projects, please do. We'd love that.
+        </p>
+        <div class="buttons">
+            <a href="https://github.com/cmspam/winq-emu-qemu" class="btn btn-secondary">QEMU Fork</a>
+            <a href="https://github.com/cmspam/winq-emu-virglrenderer" class="btn btn-secondary">virglrenderer Fork</a>
+            <a href="https://github.com/cmspam/winq-emu" class="btn btn-secondary">Main Repo</a>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <p>WINQ-EMU &mdash; because your Linux VM deserves a real GPU.</p>
+    <p style="margin-top:6px;">
+        <a href="https://github.com/cmspam/winq-emu">GitHub</a> &middot;
+        QEMU is GPL-2.0 &middot; virglrenderer is MIT &middot;
+        Built with mostly legal amounts of caffeine
+    </p>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-; WINQ-EMU Alpha 1 Installer
+; WINQ-EMU Alpha 2 Installer
 ; Optimized QEMU for Windows with WHPX host CPU and Venus Vulkan GPU
 
 !include "MUI2.nsh"
@@ -6,32 +6,32 @@
 !include "WordFunc.nsh"
 
 ; ---- General ----
-Name "WINQ-EMU Alpha 1"
-OutFile "..\WINQ-EMU-Alpha1-Setup.exe"
+Name "WINQ-EMU Alpha 2"
+OutFile "..\WINQ-EMU-Alpha2-Setup.exe"
 InstallDir "$LOCALAPPDATA\WINQ-EMU"
 InstallDirRegKey HKCU "Software\WINQ-EMU" "InstallDir"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 
 ; ---- Version Info ----
-VIProductVersion "0.1.0.0"
+VIProductVersion "0.2.0.0"
 VIAddVersionKey "ProductName" "WINQ-EMU"
-VIAddVersionKey "FileDescription" "WINQ-EMU Alpha 1 - Optimized QEMU for Windows"
-VIAddVersionKey "FileVersion" "0.1.0"
+VIAddVersionKey "FileDescription" "WINQ-EMU Alpha 2 - Optimized QEMU for Windows"
+VIAddVersionKey "FileVersion" "0.2.0"
 VIAddVersionKey "LegalCopyright" "GPL-2.0"
 
 ; ---- MUI Settings ----
 !define MUI_ABORTWARNING
 !define MUI_ICON "icons\winq-emu.ico"
 !define MUI_UNICON "icons\winq-emu.ico"
-!define MUI_WELCOMEPAGE_TITLE "Welcome to WINQ-EMU Alpha 1"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to WINQ-EMU Alpha 2"
 !define MUI_WELCOMEPAGE_TEXT "WINQ-EMU is an optimized build of QEMU for Windows featuring:$\r$\n$\r$\n\
     $\u2022  Enhanced WHPX with -cpu host passthrough$\r$\n\
     $\u2022  Venus Vulkan GPU acceleration$\r$\n\
     $\u2022  virtio-gpu blob resources$\r$\n\
     $\u2022  Graphical VM launcher$\r$\n\
     $\u2022  Virtio sound and networking$\r$\n$\r$\n\
-This will install WINQ-EMU Alpha 1 on your computer.$\r$\n$\r$\n\
+This will install WINQ-EMU Alpha 2 on your computer.$\r$\n$\r$\n\
 Click Next to continue."
 
 ; ---- Pages ----
@@ -91,7 +91,7 @@ Section "WINQ-EMU Core (required)" SecCore
     ; Write registry keys (per-user)
     WriteRegStr HKCU "Software\WINQ-EMU" "InstallDir" "$INSTDIR"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
-                     "DisplayName" "WINQ-EMU Alpha 1"
+                     "DisplayName" "WINQ-EMU Alpha 2"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                      "UninstallString" '"$INSTDIR\uninstall.exe"'
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
@@ -101,7 +101,7 @@ Section "WINQ-EMU Core (required)" SecCore
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                      "Publisher" "WINQ-EMU Project"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
-                     "DisplayVersion" "Alpha 1"
+                     "DisplayVersion" "Alpha 2"
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                        "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \

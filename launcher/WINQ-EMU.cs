@@ -60,7 +60,7 @@ namespace WINQ_EMU
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 1";
+            Text = "WINQ-EMU Alpha 2";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -696,7 +696,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WinQEMU Alpha 1 - Generated VM Configuration");
+                    sb.AppendLine("REM WinQEMU Alpha 2 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     sb.AppendLine(BuildCommand(true));

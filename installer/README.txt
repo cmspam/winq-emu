@@ -1,4 +1,4 @@
-WINQ-EMU Alpha 1
+WINQ-EMU Alpha 2
 ================
 
 WINQ-EMU is an optimized build of QEMU for Windows with:

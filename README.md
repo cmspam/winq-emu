@@ -53,7 +53,7 @@ Both build in MSYS2 UCRT64 on Windows.
 
 ## Status
 
-**Alpha 1** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 2** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
 ## Contributing
 

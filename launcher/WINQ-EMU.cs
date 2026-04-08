@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -12,6 +13,33 @@ namespace WINQ_EMU
 {
     public class MainForm : Form
     {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        struct DEVMODE
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmDeviceName;
+            public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
+            public int dmFields, dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string dmFormName;
+            public short dmLogPixels;
+            public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
+            public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType;
+            public int dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+        }
+        [DllImport("user32.dll")]
+        static extern bool EnumDisplaySettings(string deviceName, int modeNum, ref DEVMODE devMode);
+
+        static int GetMonitorRefreshRate()
+        {
+            DEVMODE dm = new DEVMODE();
+            dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+            if (EnumDisplaySettings(null, -1, ref dm))
+                return dm.dmDisplayFrequency > 0 ? dm.dmDisplayFrequency : 60;
+            return 60;
+        }
+
         // --- State ---
         string qemuBinDir;
         List<PortForward> portForwards = new List<PortForward>();
@@ -24,6 +52,7 @@ namespace WINQ_EMU
         Button btnBrowseDisk, btnCreateDisk, btnBrowseIso, btnClearIso;
         // Display tab
         ComboBox cmbDisplay;
+        ComboBox cmbRefreshRate;
         CheckBox chkVenus;
         TextBox txtHostMem;
         TrackBar sldHostMem;
@@ -244,6 +273,20 @@ namespace WINQ_EMU
             MakeLabel("Window type:", secDisp, 14, 12);
             cmbDisplay = MakeComboBox(secDisp, 130, 10, 180,
                 new[] { "SDL (recommended)", "GTK" }, 0);
+            MakeLabel("Refresh rate:", secDisp, 330, 12);
+            int detectedHz = GetMonitorRefreshRate();
+            cmbRefreshRate = new ComboBox
+            {
+                Location = new Point(430, 10),
+                Size = new Size(80, 26),
+                DropDownStyle = ComboBoxStyle.DropDown,
+                FlatStyle = FlatStyle.Flat
+            };
+            cmbRefreshRate.Items.AddRange(new object[] { "60", "75", "90", "120", "144", "165", "240" });
+            cmbRefreshRate.Text = detectedHz.ToString();
+            cmbRefreshRate.TextChanged += (s, e) => UpdateCommandPreview();
+            secDisp.Controls.Add(cmbRefreshRate);
+            MakeLabel("Hz", secDisp, 516, 12);
 
             // Venus / GPU section
             var secGpu = MakeSection("GPU ACCELERATION", page, 90, 150);
@@ -284,7 +327,6 @@ namespace WINQ_EMU
             secGpu.Controls.Add(sldHostMem);
 
             txtHostMem = MakeTextBox(secGpu, 465, 44, 50, "4");
-            txtHostMem.TextChanged -= UpdateCommandPreviewHandler;
             txtHostMem.Leave += (s, e) =>
             {
                 int val;
@@ -473,19 +515,16 @@ namespace WINQ_EMU
             args.Add("-machine q35,accel=whpx");
             args.Add("-cpu host");
 
-            // CPU cores
             int cores;
             if (!int.TryParse(txtCores.Text, out cores) || cores < 1)
                 cores = 1;
             args.Add("-smp " + cores);
 
-            // RAM
             int ram;
             if (!int.TryParse(txtRam.Text, out ram) || ram < 1)
                 ram = 4;
             args.Add("-m " + ram + "G");
 
-            // Disk image
             string disk = txtDiskImage.Text.Trim();
             if (disk.Length > 0)
             {
@@ -493,22 +532,16 @@ namespace WINQ_EMU
                 args.Add("-drive file=\"" + disk + "\",format=" + fmt + ",if=virtio");
             }
 
-            // ISO
             string iso = txtIsoImage.Text.Trim();
             if (iso.Length > 0)
-            {
                 args.Add("-cdrom \"" + iso + "\"");
-            }
 
-            // Boot device
             switch (cmbBootDevice.SelectedIndex)
             {
-                case 1: args.Add("-boot d"); break;   // CD-ROM
-                case 2: args.Add("-boot n"); break;   // Network
-                default: break;                        // Hard disk (default)
+                case 1: args.Add("-boot d"); break;
+                case 2: args.Add("-boot n"); break;
             }
 
-            // Display + GPU
             string display = cmbDisplay.SelectedIndex == 1 ? "gtk" : "sdl";
             if (chkVenus.Checked)
             {
@@ -521,27 +554,29 @@ namespace WINQ_EMU
             {
                 args.Add("-device virtio-vga-gl");
             }
-            if (display == "sdl")
-                args.Add("-display sdl,gl=on,show-cursor=off");
-            else
-                args.Add("-display gtk,gl=on");
 
-            // Sound
+            int refreshHz = 120;
+            int.TryParse(cmbRefreshRate.Text.Trim(), out refreshHz);
+            if (refreshHz < 1) refreshHz = 120;
+            int refreshMhz = refreshHz * 1000;
+
+            if (display == "sdl")
+                args.Add("-display sdl,gl=on,show-cursor=off,refresh-rate=" + refreshMhz);
+            else
+                args.Add("-display gtk,gl=on,refresh-rate=" + refreshMhz);
+
             switch (cmbSound.SelectedIndex)
             {
                 case 0: args.Add("-device virtio-sound-pci"); break;
                 case 1: args.Add("-device intel-hda"); args.Add("-device hda-duplex"); break;
                 case 2: args.Add("-device AC97"); break;
-                // 3 = none
             }
 
-            // Network + port forwarding
             string netdev = "";
             switch (cmbNetwork.SelectedIndex)
             {
                 case 0: netdev = "virtio-net-pci"; break;
                 case 1: netdev = "e1000"; break;
-                // 2 = none
             }
             if (netdev.Length > 0)
             {
@@ -566,19 +601,7 @@ namespace WINQ_EMU
 
         string BuildPortForwards()
         {
-            SyncPortForwardsFromGrid();
             var sb = new StringBuilder();
-            foreach (var pf in portForwards)
-            {
-                if (pf.HostPort.Length > 0 && pf.GuestPort.Length > 0)
-                    sb.Append(",hostfwd=" + pf.Protocol + "::" + pf.HostPort + "-:" + pf.GuestPort);
-            }
-            return sb.ToString();
-        }
-
-        void SyncPortForwardsFromGrid()
-        {
-            portForwards.Clear();
             foreach (DataGridViewRow row in dgvPorts.Rows)
             {
                 string proto = (row.Cells[0].Value ?? "").ToString().Trim();
@@ -587,20 +610,16 @@ namespace WINQ_EMU
                 if (hp.Length > 0 && gp.Length > 0)
                 {
                     if (proto != "tcp" && proto != "udp") proto = "tcp";
-                    portForwards.Add(new PortForward { Protocol = proto, HostPort = hp, GuestPort = gp });
+                    sb.Append(",hostfwd=" + proto + "::" + hp + "-:" + gp);
                 }
             }
+            return sb.ToString();
         }
 
         void UpdateCommandPreview()
         {
             if (txtCommandPreview != null)
                 txtCommandPreview.Text = BuildCommand(false);
-        }
-
-        void UpdateCommandPreviewHandler(object sender, EventArgs e)
-        {
-            UpdateCommandPreview();
         }
 
         // --- Event Handlers ---
@@ -696,7 +715,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WinQEMU Alpha 2 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 2 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     sb.AppendLine(BuildCommand(true));
@@ -732,40 +751,39 @@ namespace WINQ_EMU
 
         void ParseBatFile(string content)
         {
-            // Join continuation lines
             string cmd = content.Replace("^\r\n", " ").Replace("^\n", " ");
             cmd = Regex.Replace(cmd, @"\s+", " ");
 
-            // Disk image
             var diskMatch = Regex.Match(cmd, @"-drive\s+file=""?([^"",]+)""?");
             if (diskMatch.Success) txtDiskImage.Text = diskMatch.Groups[1].Value;
 
-            // ISO
             var isoMatch = Regex.Match(cmd, @"-cdrom\s+""?([^""]+)""?");
             if (isoMatch.Success) txtIsoImage.Text = isoMatch.Groups[1].Value;
             else txtIsoImage.Text = "";
 
-            // Boot
             if (cmd.Contains("-boot d")) cmbBootDevice.SelectedIndex = 1;
             else if (cmd.Contains("-boot n")) cmbBootDevice.SelectedIndex = 2;
             else cmbBootDevice.SelectedIndex = 0;
 
-            // SMP
             var smpMatch = Regex.Match(cmd, @"-smp\s+(\d+)");
             if (smpMatch.Success) txtCores.Text = smpMatch.Groups[1].Value;
 
-            // RAM
             var ramMatch = Regex.Match(cmd, @"-m\s+(\d+)G");
             if (ramMatch.Success) txtRam.Text = ramMatch.Groups[1].Value;
 
-            // Display
             if (cmd.Contains("gtk")) cmbDisplay.SelectedIndex = 1;
             else cmbDisplay.SelectedIndex = 0;
 
-            // Venus
+            var rrMatch = Regex.Match(cmd, @"refresh-rate=(\d+)");
+            if (rrMatch.Success)
+            {
+                int mhz;
+                if (int.TryParse(rrMatch.Groups[1].Value, out mhz) && mhz > 0)
+                    cmbRefreshRate.Text = (mhz / 1000).ToString();
+            }
+
             chkVenus.Checked = cmd.Contains("venus=on");
 
-            // Hostmem
             var hmMatch = Regex.Match(cmd, @"hostmem=(\d+)G");
             if (hmMatch.Success)
             {
@@ -775,18 +793,15 @@ namespace WINQ_EMU
                     sldHostMem.Value = Math.Max(1, Math.Min(16, hm));
             }
 
-            // Sound
             if (cmd.Contains("virtio-sound")) cmbSound.SelectedIndex = 0;
             else if (cmd.Contains("intel-hda") || cmd.Contains("hda-duplex")) cmbSound.SelectedIndex = 1;
             else if (cmd.Contains("AC97")) cmbSound.SelectedIndex = 2;
             else cmbSound.SelectedIndex = 3;
 
-            // Network
             if (cmd.Contains("virtio-net")) cmbNetwork.SelectedIndex = 0;
             else if (cmd.Contains("e1000")) cmbNetwork.SelectedIndex = 1;
             else cmbNetwork.SelectedIndex = 2;
 
-            // Port forwards
             dgvPorts.Rows.Clear();
             portForwards.Clear();
             var pfMatches = Regex.Matches(cmd, @"hostfwd=(tcp|udp)::(\d+)-:(\d+)");
@@ -939,7 +954,6 @@ namespace WINQ_EMU
             string format = cmbFormat.SelectedItem.ToString();
             string qemuImg = Path.Combine(qemuBinDir, "qemu-img.exe");
 
-            // If qemu-img doesn't exist, try creating a raw file directly
             if (!File.Exists(qemuImg))
             {
                 if (format == "raw")

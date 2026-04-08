@@ -126,7 +126,7 @@
 <div class="hero">
     <img src="logo.png" alt="WINQ-EMU">
     <h1>WINQ<span>-</span>EMU</h1>
-    <p class="tagline">Venus Vulkan GPU forwarding for QEMU on Windows.</p>
+    <p class="tagline">The best way to run desktop Linux on Windows. With real GPU acceleration.</p>
     <p class="tagline" style="font-size:1em; color:#6e7681; margin-bottom: 20px;">
         Run Linux VMs with real GPU acceleration. No more software rendering. No more excuses.
     </p>
@@ -141,13 +141,14 @@
     <div class="section">
         <h2>What is <span>this thing</span>?</h2>
         <p style="text-align:center; color:#8b949e; max-width:700px; margin:0 auto 10px;">
-            WINQ-EMU is an optimized QEMU build for Windows that connects your Linux VM
-            directly to your host GPU using the Venus Vulkan protocol.
-            Your VM gets real hardware-accelerated Vulkan. On Windows. Without WSL.
+            WINQ-EMU is the ultimate way to run a full graphical Linux desktop on Windows.
+            Unlike WSL, you get a complete desktop environment. Unlike other VM software,
+            you get real Vulkan GPU acceleration. Your Linux VM connects directly to your
+            host GPU through the Venus protocol &mdash; no software rendering, no compromises.
             It also fixes WHPX to support <code>-cpu host</code>, which upstream QEMU doesn't do yet.
         </p>
         <p style="text-align:center; color:#6e7681; font-size:0.9em;">
-            Yes, I was surprised it worked too.
+            (But honestly, you should probably just switch to Linux. QEMU is even better there.)
         </p>
 
         <div class="features">
@@ -160,8 +161,8 @@
                 <p>Full CPUID passthrough via WHPX. Your guest sees your actual CPU &mdash; AVX-512, hybrid cores, whatever fancy silicon you've got.</p>
             </div>
             <div class="feature">
-                <h3>One-Click Setup</h3>
-                <p>Installer bundles everything. Graphical launcher builds the QEMU command for you. Your grandma could almost use this. Almost.</p>
+                <h3>Full Desktop Linux</h3>
+                <p>Run KDE, GNOME, or any desktop you want. Not a terminal in a window like WSL &mdash; a real, full Linux desktop with GPU acceleration.</p>
             </div>
             <div class="feature">
                 <h3>Virtio Everything</h3>

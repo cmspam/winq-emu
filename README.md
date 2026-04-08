@@ -1,6 +1,10 @@
 # WINQ-EMU
 
-WINQ-EMU is an optimized build of QEMU for Windows that gives Linux VMs direct access to your host GPU for hardware-accelerated Vulkan rendering.
+**[Project Page](https://cmspam.github.io/winq-emu/)** | **[Download](https://github.com/cmspam/winq-emu/releases)**
+
+The best way to run a full graphical Linux desktop on Windows — with real Vulkan GPU acceleration.
+
+Unlike WSL, you get a complete desktop environment (KDE, GNOME, etc.). Unlike other VM software, you get hardware-accelerated Vulkan via the Venus protocol. WINQ-EMU gives you both.
 
 ## Download
 
@@ -8,6 +12,7 @@ Grab the latest installer from [Releases](https://github.com/cmspam/winq-emu/rel
 
 ## What You Get
 
+- **Full Linux desktop** - Run KDE, GNOME, or any DE with GPU acceleration. Not a terminal in a window.
 - **Venus Vulkan GPU forwarding** - Your Linux VM uses your real GPU for Vulkan. No software rasterization.
 - **WHPX with -cpu host** - Full CPU passthrough including AVX-512, hybrid cores, everything your CPU has. Upstream QEMU doesn't support `-cpu host` with WHPX — we fixed that.
 - **virtio-gpu blob resources** - Efficient zero-copy shared memory between host and guest.

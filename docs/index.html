@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WINQ-EMU - Vulkan GPU Acceleration for QEMU on Windows</title>
+    <title>WINQ-EMU - The Best Way to Run Desktop Linux on Windows</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -128,7 +128,8 @@
     <h1>WINQ<span>-</span>EMU</h1>
     <p class="tagline">The best way to run desktop Linux on Windows. With real GPU acceleration.</p>
     <p class="tagline" style="font-size:1em; color:#6e7681; margin-bottom: 20px;">
-        Run Linux VMs with real GPU acceleration. No more software rendering. No more excuses.
+        A modified QEMU with better WHPX support, Venus Vulkan rendering,
+        and a Windows-native display driver. Because your VM deserves better.
     </p>
     <div class="brag">~2x faster Vulkan than WSL &mdash; 410 vs 226 FPS in SuperTuxKart</div>
     <div class="buttons">
@@ -138,7 +139,7 @@
 </div>
 
 <div style="text-align:center; padding:0 20px 20px; background:#0d1117;">
-    <img src="screenshot.png" alt="CachyOS Linux running in WINQ-EMU with SuperTuxKart and vkcube"
+    <img src="screenshot.png" alt="CachyOS Linux running in WINQ-EMU"
          style="max-width:800px; width:100%; border-radius:12px; border:1px solid #21262d; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
     <p style="color:#6e7681; font-size:0.85em; margin-top:10px;">
         CachyOS with KDE Plasma running SuperTuxKart, glmark2, vkmark, and vkcube &mdash; all inside WINQ-EMU on Windows.
@@ -147,43 +148,26 @@
 
 <div class="container">
     <div class="section">
-        <h2>What is <span>this thing</span>?</h2>
-        <p style="text-align:center; color:#8b949e; max-width:700px; margin:0 auto 10px;">
-            WINQ-EMU is a modified build of QEMU and virglrenderer that enables features
-            missing from upstream on Windows: Venus Vulkan GPU forwarding, WHPX
-            <code>-cpu host</code> passthrough, and optimized display refresh.
-            Unlike WSL, you get a complete desktop environment. Unlike other VM software,
-            you get real Vulkan GPU acceleration. Your Linux VM connects directly to your
-            host GPU through the Venus protocol &mdash; no software rendering, no compromises.
-        </p>
-        <p style="text-align:center; color:#6e7681; font-size:0.9em;">
-            (But honestly, you should probably just switch to Linux. QEMU is even better there.)
-        </p>
+        <h2>Three things that <span>make it different</span></h2>
 
-        <div class="features">
+        <div class="features" style="grid-template-columns: repeat(3, 1fr);">
             <div class="feature">
-                <h3>Venus Vulkan Forwarding</h3>
-                <p>Linux guest apps talk Vulkan to your real GPU through the Venus protocol. Hardware raytracing, compute shaders, the works. Well, mostly the works. It's alpha.</p>
+                <h3>Better WHPX Support</h3>
+                <p>Full <code>-cpu host</code> passthrough that upstream QEMU doesn't support on WHPX.
+                   Hybrid CPU topology detection pins vCPUs to P-cores. Sub-millisecond timer resolution.
+                   Your VM runs at native CPU speed.</p>
             </div>
             <div class="feature">
-                <h3>-cpu host Passthrough</h3>
-                <p>Full CPUID passthrough via WHPX. Your guest sees your actual CPU &mdash; AVX-512, hybrid cores, whatever fancy silicon you've got.</p>
+                <h3>Venus Vulkan Rendering</h3>
+                <p>Your Linux VM talks directly to your host GPU through the Venus protocol.
+                   Real hardware-accelerated Vulkan. No software rendering. No compromises.
+                   (Well, maybe a few compromises. It's alpha.)</p>
             </div>
             <div class="feature">
-                <h3>Full Desktop Linux</h3>
-                <p>Run KDE, GNOME, or any desktop you want. Not a terminal in a window like WSL &mdash; a real, full Linux desktop with GPU acceleration.</p>
-            </div>
-            <div class="feature">
-                <h3>Virtio Everything</h3>
-                <p>GPU, sound, network &mdash; all virtio. Because paravirtualization is the way. virgl handles OpenGL, Venus handles Vulkan, you handle the snacks.</p>
-            </div>
-            <div class="feature">
-                <h3>Blob Resources</h3>
-                <p>Zero-copy shared memory between host and guest GPU. Your pixels take the express lane.</p>
-            </div>
-            <div class="feature">
-                <h3>Open Source, Obviously</h3>
-                <p>All patches are minimal and clean. Fork it, upstream it, frame it and hang it on your wall. I don't mind.</p>
+                <h3>Windows-Native Display</h3>
+                <p>Custom Win32+WGL display driver. More performant and more reliable than QEMU's
+                   bundled SDL and GTK backends. USB tablet support that actually works.
+                   Guest cursor forwarding. Keyboard capture. The works.</p>
             </div>
         </div>
     </div>
@@ -197,6 +181,9 @@
             experience to Windows, as I found Hyper-V, WSL, and QEMU in its upstream state
             to be insufficient. Hopefully the community will run with this and we'll end up
             with an even better Linux VM experience atop Windows.
+        </p>
+        <p style="text-align:center; color:#6e7681; font-size:0.9em; margin-top:12px;">
+            (But honestly, you should probably just switch to Linux. QEMU is even better there.)
         </p>
     </div>
 
@@ -305,7 +292,7 @@
         <h2>Source <span>code</span></h2>
         <p style="color:#8b949e; margin-bottom:20px;">
             Everything is open source. The patches are intentionally minimal for easy upstreaming.
-            If you want to merge any of this into the upstream projects, please do. We'd love that.
+            If you want to merge any of this into the upstream projects, please do. I'd love that.
         </p>
         <div class="buttons">
             <a href="https://github.com/cmspam/winq-emu-qemu" class="btn btn-secondary">QEMU Fork</a>
@@ -320,7 +307,7 @@
     <p style="margin-top:6px;">
         <a href="https://github.com/cmspam/winq-emu">GitHub</a> &middot;
         QEMU is GPL-2.0 &middot; virglrenderer is MIT &middot;
-        Built with mostly legal amounts of caffeine
+        Built with mass-produced tokens and mass-consumed caffeine
     </p>
 </div>
 

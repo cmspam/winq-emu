@@ -13,33 +13,6 @@ namespace WINQ_EMU
 {
     public class MainForm : Form
     {
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-        struct DEVMODE
-        {
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string dmDeviceName;
-            public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
-            public int dmFields, dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
-            public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string dmFormName;
-            public short dmLogPixels;
-            public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency;
-            public int dmICMMethod, dmICMIntent, dmMediaType, dmDitherType;
-            public int dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
-        }
-        [DllImport("user32.dll")]
-        static extern bool EnumDisplaySettings(string deviceName, int modeNum, ref DEVMODE devMode);
-
-        static int GetMonitorRefreshRate()
-        {
-            DEVMODE dm = new DEVMODE();
-            dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
-            if (EnumDisplaySettings(null, -1, ref dm))
-                return dm.dmDisplayFrequency > 0 ? dm.dmDisplayFrequency : 60;
-            return 60;
-        }
-
         // --- State ---
         string qemuBinDir;
         List<PortForward> portForwards = new List<PortForward>();
@@ -51,8 +24,6 @@ namespace WINQ_EMU
         ComboBox cmbBootDevice;
         Button btnBrowseDisk, btnCreateDisk, btnBrowseIso, btnClearIso;
         // Display tab
-        ComboBox cmbDisplay;
-        ComboBox cmbRefreshRate;
         CheckBox chkVenus;
         TextBox txtHostMem;
         TrackBar sldHostMem;
@@ -89,7 +60,7 @@ namespace WINQ_EMU
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 2";
+            Text = "WINQ-EMU Alpha 3";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -268,28 +239,8 @@ namespace WINQ_EMU
             page.BackColor = Color.FromArgb(245, 245, 248);
             tabs.TabPages.Add(page);
 
-            // Display Backend section
-            var secDisp = MakeSection("DISPLAY BACKEND", page, 12, 50);
-            MakeLabel("Window type:", secDisp, 14, 12);
-            cmbDisplay = MakeComboBox(secDisp, 130, 10, 180,
-                new[] { "SDL (recommended)", "GTK" }, 0);
-            MakeLabel("Refresh rate:", secDisp, 330, 12);
-            int detectedHz = GetMonitorRefreshRate();
-            cmbRefreshRate = new ComboBox
-            {
-                Location = new Point(430, 10),
-                Size = new Size(80, 26),
-                DropDownStyle = ComboBoxStyle.DropDown,
-                FlatStyle = FlatStyle.Flat
-            };
-            cmbRefreshRate.Items.AddRange(new object[] { "60", "75", "90", "120", "144", "165", "240" });
-            cmbRefreshRate.Text = detectedHz.ToString();
-            cmbRefreshRate.TextChanged += (s, e) => UpdateCommandPreview();
-            secDisp.Controls.Add(cmbRefreshRate);
-            MakeLabel("Hz", secDisp, 516, 12);
-
             // Venus / GPU section
-            var secGpu = MakeSection("GPU ACCELERATION", page, 90, 150);
+            var secGpu = MakeSection("GPU ACCELERATION", page, 12, 150);
             chkVenus = new CheckBox
             {
                 Text = "Enable Venus Vulkan GPU forwarding",
@@ -498,6 +449,10 @@ namespace WINQ_EMU
             statusBar = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             statusBar.Items.Add(statusLabel);
+            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 3") {
+                Alignment = ToolStripItemAlignment.Right,
+                ForeColor = Color.FromArgb(140, 140, 140)
+            });
             Controls.Add(statusBar);
 
             // Fix command preview sizing after layout
@@ -542,7 +497,6 @@ namespace WINQ_EMU
                 case 2: args.Add("-boot n"); break;
             }
 
-            string display = cmbDisplay.SelectedIndex == 1 ? "gtk" : "sdl";
             if (chkVenus.Checked)
             {
                 int hostmem;
@@ -555,15 +509,7 @@ namespace WINQ_EMU
                 args.Add("-device virtio-vga-gl");
             }
 
-            int refreshHz = 120;
-            int.TryParse(cmbRefreshRate.Text.Trim(), out refreshHz);
-            if (refreshHz < 1) refreshHz = 120;
-            int refreshMhz = refreshHz * 1000;
-
-            if (display == "sdl")
-                args.Add("-display sdl,gl=on,show-cursor=off,refresh-rate=" + refreshMhz);
-            else
-                args.Add("-display gtk,gl=on,refresh-rate=" + refreshMhz);
+            args.Add("-display win32-gl");
 
             switch (cmbSound.SelectedIndex)
             {
@@ -715,7 +661,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WINQ-EMU Alpha 2 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 3 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     sb.AppendLine(BuildCommand(true));
@@ -770,17 +716,6 @@ namespace WINQ_EMU
 
             var ramMatch = Regex.Match(cmd, @"-m\s+(\d+)G");
             if (ramMatch.Success) txtRam.Text = ramMatch.Groups[1].Value;
-
-            if (cmd.Contains("gtk")) cmbDisplay.SelectedIndex = 1;
-            else cmbDisplay.SelectedIndex = 0;
-
-            var rrMatch = Regex.Match(cmd, @"refresh-rate=(\d+)");
-            if (rrMatch.Success)
-            {
-                int mhz;
-                if (int.TryParse(rrMatch.Groups[1].Value, out mhz) && mhz > 0)
-                    cmbRefreshRate.Text = (mhz / 1000).ToString();
-            }
 
             chkVenus.Checked = cmd.Contains("venus=on");
 

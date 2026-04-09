@@ -4,20 +4,15 @@
 
 The best way to run a full graphical Linux desktop on Windows — with real Vulkan GPU acceleration.
 
-Unlike WSL, you get a complete desktop environment (KDE, GNOME, etc.). Unlike other VM software, you get hardware-accelerated Vulkan via the Venus protocol. WINQ-EMU gives you both.
+## Three Things That Make It Different
+
+- **Better WHPX Support** — Full `-cpu host` passthrough (not available in upstream QEMU), hybrid CPU P-core/E-core topology detection, sub-millisecond timer resolution
+- **Venus Vulkan GPU Forwarding** — Your Linux VM uses your real GPU for Vulkan. No software rasterization.
+- **Windows-Native Display** — Custom Win32+WGL display driver. More performant and reliable than QEMU's bundled SDL and GTK. USB tablet support, guest cursor forwarding, keyboard capture.
 
 ## Download
 
 Grab the latest installer from [Releases](https://github.com/cmspam/winq-emu/releases).
-
-## What You Get
-
-- **Full Linux desktop** - Run KDE, GNOME, or any DE with GPU acceleration. Not a terminal in a window.
-- **Venus Vulkan GPU forwarding** - Your Linux VM uses your real GPU for Vulkan. No software rasterization.
-- **WHPX with -cpu host** - Full CPU passthrough including AVX-512, hybrid cores, everything your CPU has. Upstream QEMU doesn't support `-cpu host` with WHPX — we fixed that.
-- **virtio-gpu blob resources** - Efficient zero-copy shared memory between host and guest.
-- **Graphical launcher** - No terminal needed. Point, click, VM.
-- **One-click installer** - All DLLs, firmware, and tools bundled.
 
 ## Quick Start
 
@@ -52,13 +47,13 @@ SuperTuxKart, Vulkan renderer, default settings, CachyOS on both:
 
 See the individual repos:
 - [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer) - Venus Windows port
-- [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu) - QEMU with WHPX + Venus
+- [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu) - QEMU with WHPX + Venus + win32-gl
 
 Both build in MSYS2 UCRT64 on Windows.
 
 ## Status
 
-**Alpha 2** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 3** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
 ## Contributing
 

@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  WINQ-EMU Alpha 2 - VM Launcher
+REM  WINQ-EMU Alpha 3 - VM Launcher
 REM
 REM  Launches a Linux VM with:
 REM    - WHPX hardware acceleration (-cpu host)
@@ -43,7 +43,7 @@ if not exist "%DISK_IMAGE%" (
 )
 
 echo.
-echo  WINQ-EMU Alpha 2
+echo  WINQ-EMU Alpha 3
 echo  ================
 echo  Disk:   %DISK_IMAGE%
 echo  Memory: %VM_MEMORY%  CPUs: %VM_CPUS%
@@ -59,8 +59,9 @@ echo.
   -smp %VM_CPUS% ^
   -drive file="%DISK_IMAGE%",format=qcow2,if=virtio ^
   -device virtio-vga-gl,blob=on,hostmem=%GPU_HOSTMEM%,venus=on ^
-  -display sdl,gl=on,show-cursor=off,refresh-rate=120000 ^
+  -display win32-gl ^
   -device virtio-sound-pci ^
+  -usb -device usb-tablet ^
   -device virtio-net-pci,netdev=net0 ^
   -netdev user,id=net0,hostfwd=tcp::%SSH_PORT%-:22
 

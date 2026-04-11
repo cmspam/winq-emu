@@ -1,0 +1,5 @@
+# Build outputs
+WINQ-EMU-*-Setup.exe
+installer/WINQ-EMU.exe
+installer/bin/
+installer/icons/

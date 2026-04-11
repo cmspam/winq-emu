@@ -60,7 +60,7 @@ namespace WINQ_EMU
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 3";
+            Text = "WINQ-EMU Alpha 4";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -449,7 +449,7 @@ namespace WINQ_EMU
             statusBar = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 3") {
+            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 4") {
                 Alignment = ToolStripItemAlignment.Right,
                 ForeColor = Color.FromArgb(140, 140, 140)
             });
@@ -661,7 +661,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WINQ-EMU Alpha 3 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 4 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     sb.AppendLine(BuildCommand(true));

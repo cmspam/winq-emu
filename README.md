@@ -8,7 +8,7 @@ The best way to run a full graphical Linux desktop on Windows — with real Vulk
 
 - **Better WHPX Support** — Full `-cpu host` passthrough (not available in upstream QEMU), hybrid CPU P-core/E-core topology detection, sub-millisecond timer resolution
 - **Venus Vulkan GPU Forwarding** — Your Linux VM uses your real GPU for Vulkan. No software rasterization.
-- **Windows-Native Display** — Custom Win32+WGL display driver. More performant and reliable than QEMU's bundled SDL and GTK. USB tablet support, guest cursor forwarding, keyboard capture.
+- **Windows-Native Display** — Custom Win32+WGL display driver. More performant and reliable than QEMU's bundled SDL and GTK. USB tablet support, guest cursor forwarding, keyboard capture, dynamic keyboard layout support for all keyboard types.
 
 ## Download
 
@@ -53,7 +53,11 @@ Both build in MSYS2 UCRT64 on Windows.
 
 ## Status
 
-**Alpha 3** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 4** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+
+### What's New in Alpha 4
+- **Keyboard fix**: Dynamic keyboard layout detection for OEM keys (backslash, brackets, etc.) — works correctly on US, UK, ISO, JIS, and all other layouts
+- **Install location**: Default install to C:\WINQ-EMU instead of AppData
 
 ## Contributing
 

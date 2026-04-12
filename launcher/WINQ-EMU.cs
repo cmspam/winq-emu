@@ -539,9 +539,7 @@ namespace WINQ_EMU
 
         string BuildCommand(bool forBatchFile = false)
         {
-            string qemu = forBatchFile
-                ? "\"%~dp0bin\\qemu-system-x86_64.exe\""
-                : "\"" + Path.Combine(qemuBinDir, "qemu-system-x86_64.exe") + "\"";
+            string qemu = "\"" + Path.Combine(qemuBinDir, "qemu-system-x86_64.exe") + "\"";
 
             var args = BuildArgs();
             string sep = forBatchFile ? " ^\r\n  " : "\r\n  ";

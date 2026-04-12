@@ -45,11 +45,24 @@ SuperTuxKart, Vulkan renderer, default settings, CachyOS on both:
 
 ## Building from Source
 
-See the individual repos:
-- [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer) - Venus Windows port
-- [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu) - QEMU with WHPX + Venus + win32-gl
+### Prerequisites
 
-Both build in MSYS2 UCRT64 on Windows.
+- [MSYS2](https://www.msys2.org/) with the UCRT64 environment
+- .NET Framework 4 (included with Windows — provides `csc.exe` at `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\`)
+
+### Build Order
+
+1. **Build virglrenderer** — see [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer). Run `ninja -C builddir install` to install to `/ucrt64`.
+2. **Build QEMU** — see [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu). Produces `qemu-system-x86_64.exe` and `qemu-img.exe`.
+3. **Build the frontend** (from this repo):
+   ```
+   csc.exe /target:winexe /out:installer\WINQ-EMU.exe /win32icon:launcher\winq-emu.ico /r:System.Windows.Forms.dll /r:System.Drawing.dll launcher\WINQ-EMU.cs
+   ```
+4. **Collect DLLs** — copy all UCRT64 DLL dependencies into `installer\bin\`. Use `ldd qemu-system-x86_64.exe` from the UCRT64 shell to find them. Also copy `winq-emu.ico` into `installer\bin\` for the window icon.
+5. **Build the installer** (requires `mingw-w64-ucrt-x86_64-nsis`):
+   ```bash
+   cd installer && makensis installer.nsi
+   ```
 
 ## Status
 

@@ -29,7 +29,7 @@ VIAddVersionKey "LegalCopyright" "GPL-2.0"
     $\u2022  Enhanced WHPX with -cpu host passthrough$\r$\n\
     $\u2022  Venus Vulkan GPU acceleration$\r$\n\
     $\u2022  virtio-gpu blob resources$\r$\n\
-    $\u2022  Native Win32+WGL display with dynamic keyboard layout$\r$\n\
+    $\u2022  Enhanced SDL display with USB tablet and DPI awareness$\r$\n\
     $\u2022  Graphical VM launcher$\r$\n\
     $\u2022  Virtio sound and networking$\r$\n$\r$\n\
 This will install WINQ-EMU Alpha 5 on your computer.$\r$\n$\r$\n\
@@ -55,6 +55,7 @@ Section "WINQ-EMU Core (required)" SecCore
     ; Binaries and DLLs
     SetOutPath "$INSTDIR\bin"
     File "bin\qemu-system-x86_64.exe"
+    File "bin\qemu-system-x86_64w.exe"
     File "bin\qemu-img.exe"
     File "bin\libvirglrenderer-1.dll"
     File "bin\*.dll"

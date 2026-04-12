@@ -59,7 +59,7 @@ echo.
   -smp %VM_CPUS% ^
   -drive file="%DISK_IMAGE%",format=qcow2,if=virtio ^
   -device virtio-vga-gl,blob=on,hostmem=%GPU_HOSTMEM%,venus=on ^
-  -display win32-gl ^
+  -display sdl,gl=on ^
   -device virtio-sound-pci ^
   -usb -device usb-tablet ^
   -device virtio-net-pci,netdev=net0 ^

@@ -8,7 +8,7 @@ The best way to run a full graphical Linux desktop on Windows — with real Vulk
 
 - **Better WHPX Support** — Full `-cpu host` passthrough (not available in upstream QEMU), hybrid CPU P-core/E-core topology detection, sub-millisecond timer resolution
 - **Venus Vulkan GPU Forwarding** — Your Linux VM uses your real GPU for Vulkan. No software rasterization.
-- **Windows-Native Display** — Custom Win32+WGL display driver. More performant and reliable than QEMU's bundled SDL and GTK. USB tablet support, guest cursor forwarding, keyboard capture, dynamic keyboard layout support for all keyboard types.
+- **Enhanced SDL Display** — DPI-aware SDL display with USB tablet support (no freezing), automatic host refresh rate matching, and Venus Vulkan GPU acceleration.
 
 ## Download
 

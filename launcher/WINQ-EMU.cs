@@ -509,7 +509,7 @@ namespace WINQ_EMU
                 args.Add("-device virtio-vga-gl");
             }
 
-            args.Add("-display win32-gl");
+            args.Add("-display sdl,gl=on");
 
             switch (cmbSound.SelectedIndex)
             {
@@ -539,7 +539,7 @@ namespace WINQ_EMU
 
         string BuildCommand(bool forBatchFile = false)
         {
-            string qemu = "\"" + Path.Combine(qemuBinDir, "qemu-system-x86_64.exe") + "\"";
+            string qemu = "\"" + Path.Combine(qemuBinDir, "qemu-system-x86_64w.exe") + "\"";
 
             var args = BuildArgs();
             string sep = forBatchFile ? " ^\r\n  " : "\r\n  ";
@@ -630,7 +630,7 @@ namespace WINQ_EMU
 
             try
             {
-                string qemuExe = Path.Combine(qemuBinDir, "qemu-system-x86_64.exe");
+                string qemuExe = Path.Combine(qemuBinDir, "qemu-system-x86_64w.exe");
                 string flatArgs = string.Join(" ", BuildArgs());
 
                 var psi = new ProcessStartInfo

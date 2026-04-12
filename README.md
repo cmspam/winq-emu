@@ -53,7 +53,7 @@ SuperTuxKart, Vulkan renderer, default settings, CachyOS on both:
 ### Build Order
 
 1. **Build virglrenderer** — see [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer). Run `ninja -C builddir install` to install to `/ucrt64`.
-2. **Build QEMU** — see [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu). Produces `qemu-system-x86_64.exe` and `qemu-img.exe`.
+2. **Build QEMU** — see [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu). Produces `qemu-system-x86_64.exe`, `qemu-system-x86_64w.exe` (no console window), and `qemu-img.exe`.
 3. **Build the frontend** (from this repo):
    ```
    csc.exe /target:winexe /out:installer\WINQ-EMU.exe /win32icon:launcher\winq-emu.ico /r:System.Windows.Forms.dll /r:System.Drawing.dll launcher\WINQ-EMU.cs

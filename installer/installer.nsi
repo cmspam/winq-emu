@@ -58,6 +58,7 @@ Section "WINQ-EMU Core (required)" SecCore
     File "bin\qemu-img.exe"
     File "bin\libvirglrenderer-1.dll"
     File "bin\*.dll"
+    File "icons\winq-emu.ico"
 
     ; Firmware (must be at bin\share\ for QEMU to find it)
     SetOutPath "$INSTDIR\bin\share"

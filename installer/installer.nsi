@@ -1,38 +1,41 @@
-; WINQ-EMU Alpha 5 Installer
-; Optimized QEMU for Windows with WHPX host CPU and Venus Vulkan GPU
+; WINQ-EMU Alpha 6 Installer
+; Optimized QEMU for Windows with WHPX host CPU, Venus Vulkan GPU,
+; 9p folder sharing, and VA-API video decode.
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 !include "WordFunc.nsh"
 
 ; ---- General ----
-Name "WINQ-EMU Alpha 5"
-OutFile "..\WINQ-EMU-Alpha5-Setup.exe"
+Name "WINQ-EMU Alpha 6"
+OutFile "..\WINQ-EMU-Alpha6-Setup.exe"
 InstallDir "C:\WINQ-EMU"
 InstallDirRegKey HKCU "Software\WINQ-EMU" "InstallDir"
 RequestExecutionLevel admin
 SetCompressor /SOLID lzma
 
 ; ---- Version Info ----
-VIProductVersion "0.5.0.0"
+VIProductVersion "0.6.0.0"
 VIAddVersionKey "ProductName" "WINQ-EMU"
-VIAddVersionKey "FileDescription" "WINQ-EMU Alpha 5 - Optimized QEMU for Windows"
-VIAddVersionKey "FileVersion" "0.5.0"
+VIAddVersionKey "FileDescription" "WINQ-EMU Alpha 6 - Optimized QEMU for Windows"
+VIAddVersionKey "FileVersion" "0.6.0"
 VIAddVersionKey "LegalCopyright" "GPL-2.0"
 
 ; ---- MUI Settings ----
 !define MUI_ABORTWARNING
 !define MUI_ICON "icons\winq-emu.ico"
 !define MUI_UNICON "icons\winq-emu.ico"
-!define MUI_WELCOMEPAGE_TITLE "Welcome to WINQ-EMU Alpha 5"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to WINQ-EMU Alpha 6"
 !define MUI_WELCOMEPAGE_TEXT "WINQ-EMU is an optimized build of QEMU for Windows featuring:$\r$\n$\r$\n\
     $\u2022  Enhanced WHPX with -cpu host passthrough$\r$\n\
     $\u2022  Venus Vulkan GPU acceleration$\r$\n\
     $\u2022  virtio-gpu blob resources$\r$\n\
     $\u2022  Enhanced SDL display with USB tablet and DPI awareness$\r$\n\
-    $\u2022  Graphical VM launcher$\r$\n\
+    $\u2022  Graphical VM launcher with Folder Sharing tab$\r$\n\
+    $\u2022  virtio-9p folder sharing (Windows host $\u2194 Linux guest)$\r$\n\
+    $\u2022  VA-API hardware video decode: H.264, HEVC, VP9, AV1$\r$\n\
     $\u2022  Virtio sound and networking$\r$\n$\r$\n\
-This will install WINQ-EMU Alpha 5 on your computer.$\r$\n$\r$\n\
+This will install WINQ-EMU Alpha 6 on your computer.$\r$\n$\r$\n\
 Click Next to continue."
 
 ; ---- Pages ----
@@ -95,7 +98,7 @@ Section "WINQ-EMU Core (required)" SecCore
     ; Write registry keys (per-user)
     WriteRegStr HKCU "Software\WINQ-EMU" "InstallDir" "$INSTDIR"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
-                     "DisplayName" "WINQ-EMU Alpha 5"
+                     "DisplayName" "WINQ-EMU Alpha 6"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                      "UninstallString" '"$INSTDIR\uninstall.exe"'
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
@@ -105,7 +108,7 @@ Section "WINQ-EMU Core (required)" SecCore
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                      "Publisher" "WINQ-EMU Project"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
-                     "DisplayVersion" "Alpha 5"
+                     "DisplayVersion" "Alpha 6"
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
                        "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\WINQ-EMU" \
@@ -139,7 +142,7 @@ Section "Start Menu Shortcut" SecShortcuts
 SectionEnd
 
 ; ---- Descriptions ----
-LangString DESC_SecCore ${LANG_ENGLISH} "QEMU with enhanced WHPX host CPU passthrough, Venus Vulkan GPU acceleration, and all required libraries."
+LangString DESC_SecCore ${LANG_ENGLISH} "QEMU with enhanced WHPX host CPU passthrough, Venus Vulkan GPU acceleration, VA-API video decode, virtio-9p folder sharing, and all required libraries."
 LangString DESC_SecPath ${LANG_ENGLISH} "Add WINQ-EMU to your user PATH so you can run qemu-system-x86_64 from any terminal."
 LangString DESC_SecShortcuts ${LANG_ENGLISH} "Create a Start Menu shortcut for launching VMs."
 

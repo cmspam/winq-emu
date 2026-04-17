@@ -252,6 +252,31 @@
     </div>
 
     <div class="section">
+        <h2>New in <span>Alpha 6</span></h2>
+        <div class="graphics-guide">
+            <h3>Folder sharing (virtio-9p)</h3>
+            <p>Pick a host folder and a mount tag in the launcher's Folder Sharing tab. Inside the guest:
+            <code>sudo mount -t 9p -o trans=virtio,version=9p2000.L &lt;tag&gt; /mnt/&lt;tag&gt;</code>.
+            Bidirectional, live.</p>
+
+            <h3>Hardware video decode (VA-API)</h3>
+            <p>The guest's Mesa virgl VA driver forwards decode to the Windows host GPU via DXVA.
+            Supported: <strong>H.264</strong> (Baseline / Main / High), <strong>HEVC</strong> (Main, Main10),
+            <strong>VP9</strong> (Profile 0, Profile 2), <strong>AV1</strong> (Main Profile 0).
+            Confirm with <code>vainfo</code> in the guest.</p>
+            <p>Works out of the box with <strong>ffmpeg, mpv, Haruna, VLC, GStreamer</strong>.</p>
+
+            <h3 class="warn">Known issue: Chromium-based browsers</h3>
+            <p>Hardware video decode in <strong>Chrome / Brave / Edge / Opera / Vivaldi</strong> currently
+            renders garbled output (stripes, flashes of unrelated GPU memory). The VA-API decode itself is
+            correct &mdash; the break is on Chromium's ANGLE + Skia Vulkan import side. Workaround: open
+            <code>chrome://settings/system</code> and <strong>uncheck "Use hardware acceleration when available"</strong>,
+            or disable "hardware-video-decoding" in <code>chrome://flags</code>. Firefox and every non-Chromium
+            consumer tested work correctly.</p>
+        </div>
+    </div>
+
+    <div class="section">
         <h2>Requirements</h2>
         <div class="features" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
             <div class="feature">
@@ -264,7 +289,7 @@
             </div>
             <div class="feature">
                 <h3>Linux Guest</h3>
-                <p>A distro with Mesa 24.0+. Fedora 40+, Ubuntu 24.04+, Arch, CachyOS, etc.</p>
+                <p>A distro with Mesa 24.0+ (26.0+ for VA-API decode). Fedora 40+, Ubuntu 24.04+, Arch, CachyOS, etc.</p>
             </div>
         </div>
     </div>

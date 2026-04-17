@@ -16,6 +16,7 @@ namespace WINQ_EMU
         // --- State ---
         string qemuBinDir;
         List<PortForward> portForwards = new List<PortForward>();
+        List<SharedFolder> sharedFolders = new List<SharedFolder>();
 
         // --- Controls ---
         TabControl tabs;
@@ -32,6 +33,9 @@ namespace WINQ_EMU
         ComboBox cmbSound, cmbNetwork;
         DataGridView dgvPorts;
         Button btnAddPort, btnRemovePort;
+        // Folder Sharing tab
+        DataGridView dgvFolders;
+        Button btnAddFolder, btnRemoveFolder, btnBrowseFolder;
         // Bottom
         TextBox txtCommandPreview;
         Button btnLaunch, btnSaveBat, btnLoadBat;
@@ -54,13 +58,14 @@ namespace WINQ_EMU
             InitializeVMTab();
             InitializeDisplayTab();
             InitializeDevicesTab();
+            InitializeFolderSharingTab();
             InitializeBottomPanel();
             UpdateCommandPreview();
         }
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 5";
+            Text = "WINQ-EMU Alpha 6";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -375,6 +380,77 @@ namespace WINQ_EMU
             secPorts.Controls.Add(lblPortNote);
         }
 
+        // --- Folder Sharing Tab ---
+        void InitializeFolderSharingTab()
+        {
+            var page = new TabPage("  Folder Sharing  ");
+            page.BackColor = Color.FromArgb(245, 245, 248);
+            page.AutoScroll = true;
+            tabs.TabPages.Add(page);
+
+            var secFolders = MakeSection("SHARED FOLDERS (9P / VIRTFS)", page, 12, 260);
+
+            dgvFolders = new DataGridView
+            {
+                Location = new Point(14, 8),
+                Size = new Size(640, 160),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                RowHeadersVisible = false,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                GridColor = Color.FromArgb(230, 230, 230),
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = Color.FromArgb(248, 248, 250),
+                    ForeColor = Color.FromArgb(60, 60, 60),
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    SelectionBackColor = Color.FromArgb(248, 248, 250),
+                    SelectionForeColor = Color.FromArgb(60, 60, 60)
+                }
+            };
+            dgvFolders.Columns.Add("HostPath", "Host Path (Windows)");
+            dgvFolders.Columns.Add("MountTag", "Mount Tag");
+            var secCol = new DataGridViewComboBoxColumn
+            {
+                HeaderText = "Security",
+                Name = "SecurityModel",
+                DataSource = new[] { "mapped-xattr", "mapped", "passthrough", "none" },
+                FlatStyle = FlatStyle.Flat
+            };
+            dgvFolders.Columns.Add(secCol);
+            dgvFolders.Columns[0].FillWeight = 55;
+            dgvFolders.Columns[1].FillWeight = 20;
+            dgvFolders.Columns[2].FillWeight = 25;
+            dgvFolders.CellEndEdit += (s, e) => UpdateCommandPreview();
+            secFolders.Controls.Add(dgvFolders);
+
+            btnAddFolder = MakeButton("Add", secFolders, 14, 178, 80, AddFolder_Click);
+            btnBrowseFolder = MakeButton("Browse...", secFolders, 100, 178, 90, BrowseFolder_Click);
+            btnRemoveFolder = MakeButton("Remove", secFolders, 196, 178, 80, RemoveFolder_Click);
+
+            var lblNote = new Label
+            {
+                Text = "Inside the guest, mount with:\n" +
+                       "    sudo mkdir -p /mnt/<tag> && sudo mount -t 9p -o trans=virtio,version=9p2000.L <tag> /mnt/<tag>\n" +
+                       "To auto-mount, add a line to /etc/fstab:\n" +
+                       "    <tag>  /mnt/<tag>  9p  trans=virtio,version=9p2000.L,nofail,_netdev  0 0\n" +
+                       "\nSecurity models:\n" +
+                       "  mapped-xattr — host owns files; guest UIDs/modes stored in NTFS alt. data streams (recommended)\n" +
+                       "  mapped — same as mapped-xattr but may work on non-NTFS paths (limited)\n" +
+                       "  passthrough / none — host uid/mode used as-is (minimal mapping)",
+                Location = new Point(14, 212),
+                Size = new Size(640, 80),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Consolas", 8.5f)
+            };
+            secFolders.Controls.Add(lblNote);
+        }
+
         // --- Bottom Panel ---
         void InitializeBottomPanel()
         {
@@ -449,7 +525,7 @@ namespace WINQ_EMU
             statusBar = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 5") {
+            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 6") {
                 Alignment = ToolStripItemAlignment.Right,
                 ForeColor = Color.FromArgb(140, 140, 140)
             });
@@ -534,6 +610,22 @@ namespace WINQ_EMU
             args.Add("-usb");
             args.Add("-device usb-tablet");
 
+            // Folder sharing via virtio-9p (winq-emu Alpha 6).
+            int fsIdx = 0;
+            foreach (DataGridViewRow row in dgvFolders.Rows)
+            {
+                string hostPath = (row.Cells[0].Value ?? "").ToString().Trim();
+                string tag = (row.Cells[1].Value ?? "").ToString().Trim();
+                string secModel = (row.Cells[2].Value ?? "mapped-xattr").ToString().Trim();
+                if (hostPath.Length == 0 || tag.Length == 0) continue;
+                if (secModel.Length == 0) secModel = "mapped-xattr";
+                string id = "fsdev" + fsIdx;
+                args.Add("-fsdev local,id=" + id + ",path=\"" + hostPath +
+                         "\",security_model=" + secModel);
+                args.Add("-device virtio-9p-pci,fsdev=" + id + ",mount_tag=" + tag);
+                fsIdx++;
+            }
+
             return args;
         }
 
@@ -617,6 +709,40 @@ namespace WINQ_EMU
             }
         }
 
+        void AddFolder_Click(object sender, EventArgs e)
+        {
+            dgvFolders.Rows.Add("", "shared", "mapped-xattr");
+            UpdateCommandPreview();
+        }
+
+        void BrowseFolder_Click(object sender, EventArgs e)
+        {
+            using (var fbd = new FolderBrowserDialog())
+            {
+                fbd.Description = "Pick a host folder to share with the VM";
+                fbd.ShowNewFolderButton = true;
+                if (fbd.ShowDialog() == DialogResult.OK)
+                {
+                    // Derive a mount tag from folder name.
+                    string tag = new DirectoryInfo(fbd.SelectedPath).Name.ToLower();
+                    tag = Regex.Replace(tag, "[^a-z0-9_]", "");
+                    if (tag.Length == 0) tag = "shared";
+                    dgvFolders.Rows.Add(fbd.SelectedPath, tag, "mapped-xattr");
+                    UpdateCommandPreview();
+                }
+            }
+        }
+
+        void RemoveFolder_Click(object sender, EventArgs e)
+        {
+            if (dgvFolders.SelectedRows.Count > 0)
+            {
+                foreach (DataGridViewRow row in dgvFolders.SelectedRows)
+                    dgvFolders.Rows.Remove(row);
+                UpdateCommandPreview();
+            }
+        }
+
         void Launch_Click(object sender, EventArgs e)
         {
             string disk = txtDiskImage.Text.Trim();
@@ -662,7 +788,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WINQ-EMU Alpha 5 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 6 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     sb.AppendLine(BuildCommand(true));
@@ -755,6 +881,24 @@ namespace WINQ_EMU
             {
                 dgvPorts.Rows.Add("tcp", "2223", "22");
                 portForwards.Add(new PortForward { Protocol = "tcp", HostPort = "2223", GuestPort = "22" });
+            }
+
+            // Reload shared folders (-fsdev/-device virtio-9p-pci pairs).
+            dgvFolders.Rows.Clear();
+            sharedFolders.Clear();
+            var fsdevMatches = Regex.Matches(cmd,
+                @"-fsdev\s+local,\s*id=(\S+?),\s*path=(""[^""]+""|\S+),\s*security_model=(\S+)");
+            foreach (Match m in fsdevMatches)
+            {
+                string id = m.Groups[1].Value;
+                string path = m.Groups[2].Value.Trim('"');
+                string sec = m.Groups[3].Value.TrimEnd(',');
+                // Find mount_tag from the matching -device line.
+                var tagMatch = Regex.Match(cmd,
+                    @"-device\s+virtio-9p-pci,\s*fsdev=" + Regex.Escape(id) + @",\s*mount_tag=(\S+)");
+                string tag = tagMatch.Success ? tagMatch.Groups[1].Value.TrimEnd(',') : "shared";
+                dgvFolders.Rows.Add(path, tag, sec);
+                sharedFolders.Add(new SharedFolder { HostPath = path, MountTag = tag, SecurityModel = sec });
             }
 
             UpdateCommandPreview();
@@ -949,6 +1093,13 @@ namespace WINQ_EMU
         public string Protocol = "tcp";
         public string HostPort = "";
         public string GuestPort = "";
+    }
+
+    public class SharedFolder
+    {
+        public string HostPath = "";
+        public string MountTag = "";
+        public string SecurityModel = "mapped-xattr";
     }
 
     static class Program

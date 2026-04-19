@@ -1,4 +1,4 @@
-WINQ-EMU Alpha 6
+WINQ-EMU Alpha 7
 ================
 
 WINQ-EMU is an optimized build of QEMU for Windows with:
@@ -14,17 +14,23 @@ WINQ-EMU is an optimized build of QEMU for Windows with:
   - virtio-gpu with blob resources
     Efficient zero-copy shared memory between host and guest GPU.
 
-  - virtio-9p folder sharing (NEW in Alpha 6)
+  - Zink (GL-over-Vulkan) on Wayland (NEW in Alpha 7)
+    Zink now works under native Wayland compositors, not only X11.
+    A Windows dma-buf shim in virglrenderer synthesizes the Linux
+    dma-buf + modifier Vulkan extensions so guest Wayland compositors
+    can import Vulkan-allocated surfaces. No configuration required.
+
+  - virtio-9p folder sharing
     Share Windows folders with the Linux guest. Pick a host folder
     and a mount tag in the GUI launcher's Folder Sharing tab, then
     mount it inside the guest with:
         sudo mount -t 9p -o trans=virtio,version=9p2000.L <tag> /mnt/<tag>
 
-  - VA-API hardware video decode (NEW in Alpha 6)
-    Linux guest apps that use libva-gallium (ffmpeg, mpv, VLC,
-    Haruna, GStreamer) can hardware-decode video through the
-    Windows host GPU's DXVA pipeline. See "VIDEO DECODE" below
-    for codec list and a known issue with Chromium/Brave.
+  - VA-API hardware video decode (EXPERIMENTAL)
+    Off by default in Alpha 7. Enable from the launcher's Experimental
+    tab. Works with ffmpeg, mpv (--hwdec=vaapi-copy), VLC, Haruna,
+    GStreamer. Does NOT work with Chromium-based browsers — see
+    "VIDEO DECODE" below.
 
 
 QUICK START
@@ -48,7 +54,8 @@ REQUIREMENTS
 
   - A GPU with up-to-date Vulkan drivers (Intel, AMD, or NVIDIA)
 
-  - A Linux VM image with Mesa 24.0+ (for the Venus Vulkan driver)
+  - A Linux VM image with Mesa 24.0+ (for the Venus Vulkan driver);
+    Mesa 26.0+ if you also want to enable experimental VA-API decode.
 
 
 GRAPHICS GUIDE
@@ -65,12 +72,10 @@ GRAPHICS GUIDE
     Most desktop environments use this by default.
 
   OpenGL via Zink
-    Zink translates OpenGL calls to Vulkan (via Venus). It can
-    offer better performance in some cases, but currently only
-    works with X11 and XWayland applications. Native Wayland
-    clients will not display output when using Zink.
+    Zink translates OpenGL calls to Vulkan (via Venus). In Alpha 7
+    this works correctly on both native Wayland and X11/XWayland,
+    so you can opt an app into Zink for potentially better perf:
 
-    To try Zink for a specific app:
       MESA_LOADER_DRIVER_OVERRIDE=zink <application>
 
   Important: Use BIOS boot, not EFI/UEFI
@@ -102,17 +107,20 @@ FOLDER SHARING (9P)
   in the guest and vice versa.
 
 
-VIDEO DECODE (VA-API)
----------------------
+VIDEO DECODE (VA-API) -- EXPERIMENTAL
+-------------------------------------
 
-  The Linux guest ships a Mesa gallium VA-API driver ("virgl")
-  that forwards video decode requests to the Windows host. The
-  host uses D3D11 VideoDecoder (DXVA) to run the actual decode
-  on your GPU. Any libva-gallium consumer will automatically
-  pick this up:
+  Off by default. Enable from the GUI launcher's "Experimental" tab
+  (checkbox "Enable VA-API hardware video decode"). If launching
+  QEMU directly, set WINQ_VAAPI=1 in the environment.
+
+  With VA-API on, the guest ships a Mesa gallium VA-API driver
+  ("virgl") that forwards video decode requests to the Windows host.
+  The host uses D3D11 VideoDecoder (DXVA) to run the actual decode
+  on your GPU. Any libva-gallium consumer will pick this up:
 
       ffmpeg -hwaccel vaapi -i <video> ...
-      mpv --hwdec=vaapi
+      mpv --hwdec=vaapi-copy
       vlc           (when configured for vaapi)
       Haruna / Kaffeine / other mpv-based players
       GStreamer (via va-plugin)
@@ -127,26 +135,23 @@ VIDEO DECODE (VA-API)
   Verify inside the guest with:
       vainfo
 
-  Known issue: Chromium and Chromium-derivatives
-    Hardware video decode does NOT work correctly in Chromium-
-    based browsers (Chrome, Brave, Edge, Opera, Vivaldi, etc.)
-    on this platform. Chromium's VaapiVideoDecoder imports the
-    exported dma-buf through ANGLE + Skia's Vulkan renderer;
-    that code path cannot correctly sample the output and the
-    video element renders as garbled stripes or flashes of
-    unrelated GPU memory.
+  Why experimental: Chromium-based browsers do not work
+    Chromium (Chrome, Brave, Edge, Opera, Vivaldi) and mpv with
+    the non-copy "--hwdec=vaapi" take a zero-copy dma-buf import
+    path via vaExportSurfaceHandle. That path is not yet functional
+    through virglrenderer on Windows -- you will see black or
+    garbled video when those apps try to hardware-decode.
 
-    Workaround: disable hardware video acceleration in the
-    browser's settings.
-        Brave:  chrome://settings/system > uncheck
-                "Use hardware acceleration when available"
-                OR open chrome://flags, search "hardware-video-
-                decoding", set to "Disabled".
-        Chrome: same paths.
+    Workarounds:
+      - Use --hwdec=vaapi-copy in mpv (works correctly).
+      - Disable hardware video acceleration in Chromium browsers:
+          chrome://settings/system  >  uncheck
+          "Use hardware acceleration when available"
+            OR open chrome://flags, search "hardware-video-
+            decoding", set to "Disabled".
 
-    VA-API works correctly in every other tested consumer
-    (ffmpeg, mpv, Haruna, VLC, GStreamer). Firefox is not
-    affected — it uses a different compositor path.
+    VA-API works correctly in every other tested consumer (ffmpeg,
+    mpv copy, Haruna, VLC, GStreamer). Firefox is not affected.
 
 
 CUSTOMIZATION
@@ -161,14 +166,15 @@ CUSTOMIZATION
     DISK_IMAGE  - Path to your disk image
 
   Or use the GUI launcher (WINQ-EMU.exe) for interactive
-  configuration including folder sharing.
+  configuration, including folder sharing and the experimental
+  VA-API toggle.
 
 
 GUEST VM RECOMMENDATIONS
 ------------------------
 
   - Use a modern distro with Mesa 24.0+ (Fedora 40+, Ubuntu 24.04+,
-    Arch/CachyOS, etc.)
+    Arch/CachyOS, etc.). Mesa 26.0+ for experimental VA-API.
   - Use a Wayland compositor (KDE Plasma, GNOME) for best results
   - Install virtio guest drivers (usually included by default)
 
@@ -193,10 +199,10 @@ TROUBLESHOOTING
     Click inside the QEMU window to capture the mouse.
     Press Ctrl+Alt+G to release it back to Windows.
 
-  Garbled video in Chromium / Brave / Edge
+  Black video in Chromium / Brave / Edge / mpv --hwdec=vaapi
     Known issue, see "VIDEO DECODE" above. Disable hardware
-    video acceleration in the browser. Other players
-    (mpv, VLC, Haruna) work correctly.
+    video acceleration in the browser, or use mpv's vaapi-copy
+    hwdec mode instead of vaapi.
 
   9p share does not mount
     Make sure you're using the version=9p2000.L option. The

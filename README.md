@@ -2,7 +2,7 @@
 
 **[Project Page](https://cmspam.github.io/winq-emu/)** | **[Download](https://github.com/cmspam/winq-emu/releases)**
 
-The best way to run a full graphical Linux desktop on Windows — with real Vulkan GPU acceleration, hardware video decode, and host folder sharing.
+The best way to run a full graphical Linux desktop on Windows — with real Vulkan GPU acceleration, Wayland compositor support, and host folder sharing.
 
 ## Three Things That Make It Different
 
@@ -34,9 +34,9 @@ SuperTuxKart, Vulkan renderer, default settings, CachyOS on both:
 
 - **Vulkan**: Works everywhere (Wayland + X11) via Venus
 - **OpenGL**: Works everywhere via virgl (GL forwarding)
-- **Zink (GL-over-Vulkan)**: Works on X11/XWayland only (not native Wayland)
+- **Zink (GL-over-Vulkan)**: Works on Wayland and X11/XWayland
 - **Folder sharing**: virtio-9p host ↔ guest folders via the GUI launcher's Folder Sharing tab
-- **Hardware video decode**: VA-API for H.264, HEVC (Main / Main10), VP9 (Profile 0 / Profile 2), AV1 — routed through the host GPU's DXVA pipeline
+- **Hardware video decode (experimental)**: VA-API for H.264, HEVC (Main / Main10), VP9 (Profile 0 / Profile 2), AV1 — routed through the host GPU's DXVA pipeline. Opt-in from the Experimental tab.
 
 **Important**: Use BIOS boot, not EFI. EFI boot causes a timing issue that tanks Vulkan performance to ~5 FPS.
 
@@ -57,9 +57,11 @@ For auto-mount at boot, add to `/etc/fstab`:
 
 Changes propagate both ways.
 
-## Hardware Video Decode (VA-API)
+## Hardware Video Decode (VA-API) — Experimental
 
-Mesa's `virgl` gallium VA driver in the guest forwards decode commands to virglrenderer on the host, which runs the actual decode on `ID3D11VideoDecoder` (DXVA). Decoded frames flow back to the guest as shmem BOs that libva consumers read like any other VA surface.
+VA-API is off by default. Enable it from the **Experimental** tab in the launcher (or set `WINQ_VAAPI=1` in the environment before launching `qemu-system-x86_64.exe` directly).
+
+With it enabled, Mesa's `virgl` Gallium VA driver in the guest forwards decode commands to virglrenderer on the host, which runs the actual decode on `ID3D11VideoDecoder` (DXVA). Decoded frames flow back to the guest as virtio-gpu resources that libva consumers read through `vaGetImage` / `vaMapBuffer`.
 
 Supported codecs:
 
@@ -72,18 +74,18 @@ Supported codecs:
 
 Confirm inside the guest with `vainfo`.
 
-Known-good consumers: **ffmpeg, mpv, Haruna, VLC, GStreamer**.
+**Known-good consumers** (anything that uses the `vaGetImage` / vaapi-copy path): **ffmpeg, mpv (`--hwdec=vaapi-copy`), VLC, Haruna, GStreamer**.
 
-### Known Issue: Chromium-based browsers
+### Why it's experimental
 
-Hardware video decode does **not** work correctly in Chromium-based browsers (Chrome, Brave, Edge, Opera, Vivaldi). Chromium's `VaapiVideoDecoder` routes the exported dma-buf through ANGLE + Skia Vulkan and the resulting sampler produces garbled output (vertical stripes, flashes of unrelated GPU memory, or stuck frames) instead of the decoded video. The VA-API decode itself is correct — byte-exact against the software decoder for all four codecs — the break is on Chromium's GL-EGL import side.
+Chromium-based browsers (Chrome, Brave, Edge, Opera, Vivaldi), and mpv with `--hwdec=vaapi` (non-copy) take a **zero-copy** path via `vaExportSurfaceHandle` + `EGL_LINUX_DMA_BUF_EXT`. That path is not yet functional through virglrenderer on Windows — you'll see black or garbled video. For now the only reliable workarounds for Chromium users are:
 
-**Workaround for Chromium/Brave users**: Disable hardware video acceleration.
+- Disable hardware video acceleration in the browser:
+  - `chrome://settings/system` → uncheck "Use hardware acceleration when available", or
+  - `chrome://flags` → search for "hardware-video-decoding" → set to **Disabled**.
+- Or prefer mpv / VLC / Haruna for video playback, where the copy path works.
 
-- Open `chrome://settings/system` and uncheck "Use hardware acceleration when available", **or**
-- Open `chrome://flags`, search for "hardware-video-decoding", set to **Disabled**.
-
-Firefox and every non-Chromium consumer tested (ffmpeg, mpv, Haruna, VLC) work correctly with hardware acceleration enabled.
+Firefox and every non-Chromium consumer tested above work correctly.
 
 ## Guest Requirements
 
@@ -114,11 +116,16 @@ Firefox and every non-Chromium consumer tested (ffmpeg, mpv, Haruna, VLC) work c
 
 ## Status
 
-**Alpha 6** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 7** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
-### What's New in Alpha 6
-- **virtio-9p folder sharing** — share Windows folders with the Linux guest via the new Folder Sharing tab in the GUI launcher. Uses the Windows port of QEMU's 9pfs backend.
-- **VA-API hardware video decode** — H.264, HEVC (Main / Main10), VP9 (Profile 0 / Profile 2), and AV1 (Main Profile 0) decode through the host GPU's DXVA pipeline. Works in ffmpeg, mpv, Haruna, VLC, and GStreamer. **Chromium-based browsers have a known rendering bug — see above.**
+### What's New in Alpha 7
+- **Zink on Wayland** — Zink (GL-over-Vulkan) now works under native Wayland compositors, not only X11/XWayland. Enabled by a Windows dma-buf shim that synthesizes `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier` on top of the host Vulkan ICD so guest Wayland compositors can import Vulkan-allocated surfaces.
+- **VA-API moved to experimental** — now off by default; enable from the launcher's **Experimental** tab. The copy path (mpv/VLC/Haruna) remains reliable; the zero-copy path used by Chromium is still broken and is being tracked as a separate project.
+- **Rebased** on latest upstream QEMU + virglrenderer.
+
+### What Was New in Alpha 6
+- **virtio-9p folder sharing** — share Windows folders with the Linux guest via the Folder Sharing tab in the GUI launcher. Uses the Windows port of QEMU's 9pfs backend.
+- **VA-API hardware video decode** — H.264, HEVC (Main / Main10), VP9 (Profile 0 / Profile 2), and AV1 (Main Profile 0) decode through the host GPU's DXVA pipeline.
 - **Rebased** on latest upstream QEMU + virglrenderer.
 
 ### What Was New in Alpha 5

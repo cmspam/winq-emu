@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  WINQ-EMU Alpha 6 - VM Launcher
+REM  WINQ-EMU Alpha 7 - VM Launcher
 REM
 REM  Launches a Linux VM with:
 REM    - WHPX hardware acceleration (-cpu host)
@@ -43,7 +43,7 @@ if not exist "%DISK_IMAGE%" (
 )
 
 echo.
-echo  WINQ-EMU Alpha 6
+echo  WINQ-EMU Alpha 7
 echo  ================
 echo  Disk:   %DISK_IMAGE%
 echo  Memory: %VM_MEMORY%  CPUs: %VM_CPUS%

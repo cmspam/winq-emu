@@ -36,6 +36,8 @@ namespace WINQ_EMU
         // Folder Sharing tab
         DataGridView dgvFolders;
         Button btnAddFolder, btnRemoveFolder, btnBrowseFolder;
+        // Experimental tab
+        CheckBox chkVaapi;
         // Bottom
         TextBox txtCommandPreview;
         Button btnLaunch, btnSaveBat, btnLoadBat;
@@ -59,13 +61,14 @@ namespace WINQ_EMU
             InitializeDisplayTab();
             InitializeDevicesTab();
             InitializeFolderSharingTab();
+            InitializeExperimentalTab();
             InitializeBottomPanel();
             UpdateCommandPreview();
         }
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 6";
+            Text = "WINQ-EMU Alpha 7";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -451,6 +454,51 @@ namespace WINQ_EMU
             secFolders.Controls.Add(lblNote);
         }
 
+        // --- Experimental Tab ---
+        void InitializeExperimentalTab()
+        {
+            var page = new TabPage("  Experimental  ");
+            page.BackColor = Color.FromArgb(245, 245, 248);
+            tabs.TabPages.Add(page);
+
+            var secVaapi = MakeSection("HARDWARE VIDEO DECODE (VA-API)", page, 12, 200);
+
+            chkVaapi = new CheckBox
+            {
+                Text = "Enable VA-API hardware video decode (experimental)",
+                Location = new Point(14, 12),
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            chkVaapi.CheckedChanged += (s, e) => UpdateCommandPreview();
+            secVaapi.Controls.Add(chkVaapi);
+
+            var lblVaapiNote = new Label
+            {
+                Text = "Routes Mesa's virgl VA-API driver to the host GPU's DXVA pipeline\n" +
+                       "(H.264, HEVC Main/Main10, VP9 Profile 0/2, AV1 Profile 0).\n" +
+                       "\n" +
+                       "Works with: ffmpeg, mpv, VLC, Haruna, GStreamer\n" +
+                       "   (anything that uses the vaGetImage / vaapi-copy path).\n" +
+                       "\n" +
+                       "Does NOT work with: Chromium-based browsers (Chrome, Brave, Edge,\n" +
+                       "   Opera, Vivaldi). Chromium's VaapiVideoDecoder uses the\n" +
+                       "   vaExportSurfaceHandle zero-copy path, which is not yet\n" +
+                       "   functional through virglrenderer on Windows — you'll see\n" +
+                       "   black or garbled video. Disable hardware video decode in\n" +
+                       "   the browser's settings as a workaround.\n" +
+                       "\n" +
+                       "Leave this off unless you're specifically playing back video in\n" +
+                       "a supported app; it adds no value otherwise.",
+                Location = new Point(14, 44),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Segoe UI", 8.5f)
+            };
+            secVaapi.Controls.Add(lblVaapiNote);
+        }
+
         // --- Bottom Panel ---
         void InitializeBottomPanel()
         {
@@ -525,7 +573,7 @@ namespace WINQ_EMU
             statusBar = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 6") {
+            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 7") {
                 Alignment = ToolStripItemAlignment.Right,
                 ForeColor = Color.FromArgb(140, 140, 140)
             });
@@ -610,7 +658,7 @@ namespace WINQ_EMU
             args.Add("-usb");
             args.Add("-device usb-tablet");
 
-            // Folder sharing via virtio-9p (winq-emu Alpha 6).
+            // Folder sharing via virtio-9p.
             int fsIdx = 0;
             foreach (DataGridViewRow row in dgvFolders.Rows)
             {
@@ -766,6 +814,8 @@ namespace WINQ_EMU
                     UseShellExecute = false,
                     WorkingDirectory = qemuBinDir
                 };
+                if (chkVaapi != null && chkVaapi.Checked)
+                    psi.EnvironmentVariables["WINQ_VAAPI"] = "1";
                 Process.Start(psi);
                 statusLabel.Text = "VM launched.";
             }
@@ -788,9 +838,15 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WINQ-EMU Alpha 6 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 7 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
+                    if (chkVaapi != null && chkVaapi.Checked)
+                    {
+                        sb.AppendLine("REM Enable experimental VA-API hardware video decode");
+                        sb.AppendLine("set WINQ_VAAPI=1");
+                        sb.AppendLine();
+                    }
                     sb.AppendLine(BuildCommand(true));
                     sb.AppendLine();
                     sb.AppendLine("if errorlevel 1 pause");

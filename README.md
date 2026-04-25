@@ -120,8 +120,8 @@ Firefox and every non-Chromium consumer tested above work correctly.
 
 ### What's New in Alpha 8
 - **Rebased on QEMU 11.0.0** (final release, up from 11.0.0-rc3 in Alpha 7).
-- **Rebased on virglrenderer 1.3.0** (stable release, replacing the live-`main` snapshot used in Alpha 7).
-- No functional changes vs Alpha 7 — this release exists to track stable upstream releases instead of release candidates / development tips.
+- **Rebased on the latest upstream virglrenderer** (`main` tip, ~7 weeks newer than the Alpha 7 base — picks up upstream Mesa uprev, NULL-check fixes in `virglrenderer.c`, sync-thread cleanup in `vrend`, cursor-orientation fix, and proxy SHM size validation).
+- No functional changes vs Alpha 7 — same Windows-host Venus + virtio-gpu feature set.
 
 ### What Was New in Alpha 7
 - **Zink on Wayland** — Zink (GL-over-Vulkan) now works under native Wayland compositors, not only X11/XWayland. Enabled by a Windows dma-buf shim that synthesizes `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier` on top of the host Vulkan ICD so guest Wayland compositors can import Vulkan-allocated surfaces.

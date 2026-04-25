@@ -1,4 +1,4 @@
-WINQ-EMU Alpha 7
+WINQ-EMU Alpha 8
 ================
 
 WINQ-EMU is an optimized build of QEMU for Windows with:
@@ -14,7 +14,7 @@ WINQ-EMU is an optimized build of QEMU for Windows with:
   - virtio-gpu with blob resources
     Efficient zero-copy shared memory between host and guest GPU.
 
-  - Zink (GL-over-Vulkan) on Wayland (NEW in Alpha 7)
+  - Zink (GL-over-Vulkan) on Wayland
     Zink now works under native Wayland compositors, not only X11.
     A Windows dma-buf shim in virglrenderer synthesizes the Linux
     dma-buf + modifier Vulkan extensions so guest Wayland compositors
@@ -27,7 +27,7 @@ WINQ-EMU is an optimized build of QEMU for Windows with:
         sudo mount -t 9p -o trans=virtio,version=9p2000.L <tag> /mnt/<tag>
 
   - VA-API hardware video decode (EXPERIMENTAL)
-    Off by default in Alpha 7. Enable from the launcher's Experimental
+    Off by default. Enable from the launcher's Experimental
     tab. Works with ffmpeg, mpv (--hwdec=vaapi-copy), VLC, Haruna,
     GStreamer. Does NOT work with Chromium-based browsers — see
     "VIDEO DECODE" below.
@@ -72,8 +72,8 @@ GRAPHICS GUIDE
     Most desktop environments use this by default.
 
   OpenGL via Zink
-    Zink translates OpenGL calls to Vulkan (via Venus). In Alpha 7
-    this works correctly on both native Wayland and X11/XWayland,
+    Zink translates OpenGL calls to Vulkan (via Venus). This works
+    correctly on both native Wayland and X11/XWayland,
     so you can opt an app into Zink for potentially better perf:
 
       MESA_LOADER_DRIVER_OVERRIDE=zink <application>

@@ -116,9 +116,14 @@ Firefox and every non-Chromium consumer tested above work correctly.
 
 ## Status
 
-**Alpha 7** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 8** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
-### What's New in Alpha 7
+### What's New in Alpha 8
+- **Rebased on QEMU 11.0.0** (final release, up from 11.0.0-rc3 in Alpha 7).
+- **Rebased on virglrenderer 1.3.0** (stable release, replacing the live-`main` snapshot used in Alpha 7).
+- No functional changes vs Alpha 7 — this release exists to track stable upstream releases instead of release candidates / development tips.
+
+### What Was New in Alpha 7
 - **Zink on Wayland** — Zink (GL-over-Vulkan) now works under native Wayland compositors, not only X11/XWayland. Enabled by a Windows dma-buf shim that synthesizes `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier` on top of the host Vulkan ICD so guest Wayland compositors can import Vulkan-allocated surfaces.
 - **VA-API moved to experimental** — now off by default; enable from the launcher's **Experimental** tab. The copy path (mpv/VLC/Haruna) remains reliable; the zero-copy path used by Chromium is still broken and is being tracked as a separate project.
 - **Rebased** on latest upstream QEMU + virglrenderer.

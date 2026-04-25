@@ -102,7 +102,7 @@ Firefox and every non-Chromium consumer tested above work correctly.
 
 ### Build Order
 
-1. **Build virglrenderer** — see [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer). Run `ninja -C builddir install` to install `libvirglrenderer-1.dll` to `/ucrt64/bin`.
+1. **Build virglrenderer** — see [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer). Configure with `-Dvenus=true -Dvideo=true -Dtests=false` (the `-Dvideo=true` flag is required for the D3D11 video decode backend that Zink-on-Wayland and VA-API both depend on). Run `ninja -C builddir install` to install `libvirglrenderer-1.dll` to `/ucrt64/bin`.
 2. **Build QEMU** — see [winq-emu-qemu](https://github.com/cmspam/winq-emu-qemu). Produces `qemu-system-x86_64.exe`, `qemu-system-x86_64w.exe` (no console window), and `qemu-img.exe`.
 3. **Build the frontend** (from this repo):
    ```
@@ -119,9 +119,9 @@ Firefox and every non-Chromium consumer tested above work correctly.
 **Alpha 8** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
 ### What's New in Alpha 8
-- **Rebased on QEMU 11.0.0** (final release, up from 11.0.0-rc3 in Alpha 7).
-- **Rebased on the latest upstream virglrenderer** (`main` tip, ~7 weeks newer than the Alpha 7 base — picks up upstream Mesa uprev, NULL-check fixes in `virglrenderer.c`, sync-thread cleanup in `vrend`, cursor-orientation fix, and proxy SHM size validation).
-- No functional changes vs Alpha 7 — same Windows-host Venus + virtio-gpu feature set.
+- **Rebased on QEMU 11.0.0** (final release, up from the 11.0.0-rc3 snapshot used in Alpha 7).
+- **Rebased on the virglrenderer 1.3.0 stable tag** (replacing the development-tip snapshot used in Alpha 7), so the patch series now sits on a tagged, reproducible upstream tree.
+- No functional changes vs Alpha 7 — same Windows-host Venus + virtio-gpu + 9pfs + D3D11 video decode feature set.
 
 ### What Was New in Alpha 7
 - **Zink on Wayland** — Zink (GL-over-Vulkan) now works under native Wayland compositors, not only X11/XWayland. Enabled by a Windows dma-buf shim that synthesizes `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_format_modifier` on top of the host Vulkan ICD so guest Wayland compositors can import Vulkan-allocated surfaces.

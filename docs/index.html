@@ -252,6 +252,34 @@
     </div>
 
     <div class="section">
+        <h2>New in <span>Alpha 9</span></h2>
+        <div class="graphics-guide">
+            <h3>Vulkan WSI no longer stalls per frame</h3>
+            <p>The host's Mesa-extension cleanup paths (<code>vkWaitSemaphoreResourceMESA</code>,
+            <code>vkResetFenceResourceMESA</code>) used to do synchronous GPU waits and Win32 handle
+            export/close ceremonies on every guest WSI present, blocking the dispatcher for the
+            GPU's frame time. They now match Linux's non-blocking semantics &mdash; the dispatcher
+            returns immediately and the GPU consumes the semaphore signal in the background. This
+            was a real per-frame stall on every Vulkan game and Wayland workload.</p>
+
+            <h3>Sub-millisecond Windows timer resolution</h3>
+            <p><code>virgl_renderer_init</code> now sets <code>timeBeginPeriod(1)</code> and the
+            ring relax path uses <code>CreateWaitableTimerEx HIGH_RESOLUTION</code> for sub-ms
+            delays. Without these, microsecond-scale dispatcher sleeps were rounded up to the
+            15.625&nbsp;ms system timer tick &mdash; the dispatcher would oversleep into the next
+            frame and miss bursts of guest commands.</p>
+
+            <h3>MMCSS scheduling for Vulkan worker threads</h3>
+            <p>The ring monitor and per-queue sync threads register with the Multimedia Class
+            Scheduler Service under "Pro Audio" so Windows treats them like low-latency audio
+            workers: longer time slices, less likely to be preempted by background work. Reduces
+            frame-time jitter on Vulkan workloads.</p>
+
+            <p>No QEMU changes vs Alpha 8 &mdash; same v11.0.0 base.</p>
+        </div>
+    </div>
+
+    <div class="section">
         <h2>New in <span>Alpha 8</span></h2>
         <div class="graphics-guide">
             <h3>Stable upstream tracking</h3>

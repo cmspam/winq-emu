@@ -116,9 +116,15 @@ Firefox and every non-Chromium consumer tested above work correctly.
 
 ## Status
 
-**Alpha 8** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 9** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
-### What's New in Alpha 8
+### What's New in Alpha 9
+- **Vulkan WSI no longer stalls the dispatcher per frame.** The host's `vkWaitSemaphoreResourceMESA` and `vkResetFenceResourceMESA` paths used to do synchronous GPU waits and expensive Win32 handle export/close ceremonies on every guest WSI present. They now match Linux's non-blocking semantics — the dispatcher returns immediately and lets the GPU consume the semaphore signal in the background. This was a real per-frame stall on every Vulkan game and Wayland workload.
+- **Sub-millisecond Windows timer resolution.** `virgl_renderer_init` now sets `timeBeginPeriod(1)` and `vkr_ring_relax` uses `CreateWaitableTimerEx HIGH_RESOLUTION` for sub-millisecond delays. Without these, the ring monitor's microsecond-scale sleeps were rounded up to the 15.625ms system timer tick — the dispatcher would oversleep into the next frame, missing a whole burst of guest commands.
+- **Ring + queue threads register with MMCSS ("Pro Audio").** The two latency-sensitive worker threads now get longer time slices and are less likely to be preempted by background work. Reduces frame-time jitter on Vulkan workloads.
+- No QEMU code changes vs Alpha 8 — same v11.0.0 base.
+
+### What Was New in Alpha 8
 - **Rebased on QEMU 11.0.0** (final release, up from the 11.0.0-rc3 snapshot used in Alpha 7).
 - **Rebased on the virglrenderer 1.3.0 stable tag** (replacing the development-tip snapshot used in Alpha 7), so the patch series now sits on a tagged, reproducible upstream tree.
 - No functional changes vs Alpha 7 — same Windows-host Venus + virtio-gpu + 9pfs + D3D11 video decode feature set.

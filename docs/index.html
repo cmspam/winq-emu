@@ -224,12 +224,11 @@
 
         <div class="alpha-warning">
             <h3>Here Be Dragons</h3>
-            <p>Everything here is built from git, not stable releases. The QEMU is from rc3,
-            the Mesa drivers are from main, and the whole thing is held together by
-            optimism and a concerning number of late nights. Things might crash.
-            Things might look weird. Your cat might judge you. But honestly?
-            It's already pretty solid for something this experimental.
-            I'm just covering my bases here.</p>
+            <p>The QEMU base is on the v11.0.0 tag, virglrenderer is on the 1.3.0 tag,
+            and the Windows / Venus / WHPX patches sit on top as a clean series.
+            But it's still alpha &mdash; things might crash, things might look weird,
+            your cat might judge you. Pretty solid for something this experimental,
+            but I'm covering my bases here.</p>
         </div>
     </div>
 
@@ -248,6 +247,71 @@
 
             <h3 class="warn">Use BIOS boot, not EFI</h3>
             <p>EFI boot causes a timing issue that tanks Vulkan to ~5 FPS. Stick with BIOS. I'm looking into it.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>New in <span>Alpha 10</span></h2>
+        <div class="graphics-guide">
+            <h3>PAT MSR sync &mdash; faster everything that touches GPU memory</h3>
+            <p>Linux uses the PAT MSR to mark virtio-gpu and Venus shared mappings as
+            Write-Combining. The previous WHPX path skipped syncing PAT in three places,
+            so the guest's cache-type computation could fall back to Uncacheable for
+            memory that should be WC. The fix is a 30-line change in
+            <code>target/i386/whpx/whpx-all.c</code>. Vulkan / OpenGL workloads that move
+            real GPU memory should be measurably faster on Alpha 10.</p>
+
+            <h3>SLAT entries pinned for big mappings (Win11 24H2+)</h3>
+            <p><code>WHvAdviseGpaRange(Pin)</code> now hints to the hypervisor that
+            anything 256&nbsp;MiB or larger should keep its SLAT entries pinned &mdash; in
+            particular the base RAM and the 4&nbsp;GiB Venus blob hostmem region. Before,
+            the hypervisor was free to demote 2&nbsp;MiB / 1&nbsp;GiB pages to 4&nbsp;KiB
+            under host memory pressure, which produced a "60&nbsp;fps &rarr; 30&nbsp;fps and
+            I have no idea why" cliff under heavy graphics. The 24H2 partition properties
+            silently no-op on older Windows.</p>
+
+            <h3>5&nbsp;ms cap on the WHPX inner exit loop</h3>
+            <p>A guest spinning through cheap MMIO / CPUID / MSR exits during a Vulkan
+            submit storm could keep a vCPU thread inside <code>WHvRunVirtualProcessor</code>
+            for tens of ms, blocking the QEMU main loop and timer dispatch. Now we cap
+            time-in-loop at 5&nbsp;ms wall clock, raise <code>EXCP_INTERRUPT</code>, and
+            yield. Smoother frame pacing without measurably hurting throughput.</p>
+
+            <h3>x86 <code>FastHypercallOutput</code>, <code>UnimplementedMsrAction</code> drop, faster boot</h3>
+            <p>The ARM path has had <code>FastHypercallOutput=1</code> for a while; x86
+            didn't. Now it does &mdash; every Hyper-V hypercall (TLB shootdown, IPI cluster)
+            returns via registers instead of a guest-physical output page. And on
+            24H2+ Windows, <code>UnimplementedMsrAction = IgnoreWriteReadZero</code>
+            tells the hypervisor to handle Linux's couple-hundred boot-time MSR probes
+            in-kernel instead of trapping to userspace.</p>
+
+            <h3>Ray-tracing acceleration structures get the deferred-destroy treatment</h3>
+            <p>The Intel ICD handle-recycle workaround in <code>vkr_win32_shim.c</code> already
+            covered 14 lightweight Vulkan object types; Alpha 10 adds
+            <code>VkAccelerationStructureKHR</code>. RT games (Quake II RTX, Portal RTX,
+            anything via vkd3d-proton) destroy and recreate AS handles every frame as TLAS
+            rebuilds, so this is the same bug class. If you have a working RT title that
+            previously crashed mid-run, please file an issue with a repro.</p>
+
+            <h3>Multi-disk support in the launcher</h3>
+            <p>The Disk Image section is now a proper table: add as many qcow2 / raw
+            images as you want, choose virtio / scsi / ide per disk, and the first one
+            boots by default. Exported <code>.bat</code> files round-trip multiple
+            <code>-drive</code> lines so you can keep editing.</p>
+
+            <h3><code>WINQ_DIAG=1</code> &mdash; one switch for diagnostic logs</h3>
+            <p>If something looks wrong and I ask for a log, set <code>WINQ_DIAG=1</code>
+            in the env before launching. That flips on every existing per-module
+            diagnostic stream and routes the output to
+            <code>%LOCALAPPDATA%\winq-emu\virglrenderer.log</code>. Replaces the old matrix
+            of <code>VIRGL_VIDEO_DIAG</code> / <code>VIRGL_VIDEO_D3D11_DEBUG</code> /
+            <code>VIRGL_LOG_FILE</code> / <code>VIRGL_LOG_LEVEL</code> toggles.</p>
+
+            <h3>Plus four upstream cherry-picks</h3>
+            <p>NULL-resource deref guard in <code>virgl_renderer_resource_map_fixed</code>
+            (was guest-triggerable), <code>vrend_renderer_init</code> cleanup order on init
+            failure, <code>vkr_allocator</code> instance NULL on <code>vkCreateInstance</code>
+            failure, cursor <code>Y_0_TOP</code> orientation flip. Small reliability wins.</p>
         </div>
     </div>
 

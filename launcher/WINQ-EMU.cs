@@ -71,8 +71,8 @@ namespace WINQ_EMU
         void InitializeForm()
         {
             Text = "WINQ-EMU Alpha 10";
-            Size = new Size(780, 680);
-            MinimumSize = new Size(700, 600);
+            Size = new Size(800, 820);
+            MinimumSize = new Size(760, 760);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f);
             BackColor = Color.FromArgb(245, 245, 248);
@@ -207,11 +207,11 @@ namespace WINQ_EMU
             tabs.TabPages.Add(page);
 
             // Disk Images section (multi-disk)
-            var secDisk = MakeSection("DISK IMAGES", page, 12, 200);
+            var secDisk = MakeSection("DISK IMAGES", page, 12, 180);
             dgvDisks = new DataGridView
             {
                 Location = new Point(14, 8),
-                Size = new Size(640, 130),
+                Size = new Size(640, 110),
                 BackgroundColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
@@ -246,12 +246,12 @@ namespace WINQ_EMU
             dgvDisks.RowsRemoved += (s, e) => UpdateCommandPreview();
             secDisk.Controls.Add(dgvDisks);
 
-            btnAddDisk = MakeButton("Add", secDisk, 14, 146, 80, AddDisk_Click);
-            btnBrowseDisk = MakeButton("Browse...", secDisk, 100, 146, 90, BrowseDisk_Click);
-            btnCreateDisk = MakeButton("Create New...", secDisk, 196, 146, 105, CreateDisk_Click);
-            btnRemoveDisk = MakeButton("Remove", secDisk, 307, 146, 80, RemoveDisk_Click);
+            btnAddDisk = MakeButton("Add", secDisk, 14, 126, 80, AddDisk_Click);
+            btnBrowseDisk = MakeButton("Browse...", secDisk, 100, 126, 90, BrowseDisk_Click);
+            btnCreateDisk = MakeButton("Create New...", secDisk, 196, 126, 105, CreateDisk_Click);
+            btnRemoveDisk = MakeButton("Remove", secDisk, 307, 126, 80, RemoveDisk_Click);
             MakeLabel("Browse picks a file for the selected row. Create New makes a new qcow2.",
-                      secDisk, 14, 174);
+                      secDisk, 14, 156);
             secDisk.Controls[secDisk.Controls.Count - 1].ForeColor = Color.FromArgb(140, 140, 140);
             ((Label)secDisk.Controls[secDisk.Controls.Count - 1]).Font = new Font("Segoe UI", 8.5f);
             // Start with one empty row so users see the format/interface defaults
@@ -259,20 +259,20 @@ namespace WINQ_EMU
             dgvDisks.Rows.Add("", "auto", "virtio");
 
             // ISO / CD-ROM section
-            var secIso = MakeSection("CD-ROM / ISO", page, 224, 44);
+            var secIso = MakeSection("CD-ROM / ISO", page, 220, 44);
             MakeLabel("ISO:", secIso, 14, 10);
             txtIsoImage = MakeTextBox(secIso, 75, 8, 380);
             btnBrowseIso = MakeButton("Browse...", secIso, 464, 7, 80, BrowseIso_Click);
             btnClearIso = MakeButton("Clear", secIso, 550, 7, 60, (s, e) => { txtIsoImage.Text = ""; });
 
             // Boot Device section
-            var secBoot = MakeSection("BOOT", page, 296, 44);
+            var secBoot = MakeSection("BOOT", page, 292, 44);
             MakeLabel("Boot device:", secBoot, 14, 10);
             cmbBootDevice = MakeComboBox(secBoot, 110, 8, 180,
                 new[] { "Hard Disk (default)", "CD-ROM", "Network (PXE)" }, 0);
 
             // CPU & RAM section
-            var secCpu = MakeSection("CPU & MEMORY", page, 368, 50);
+            var secCpu = MakeSection("CPU & MEMORY", page, 364, 50);
             MakeLabel("CPU cores:", secCpu, 14, 12);
             int defaultCores = Math.Max(1, Environment.ProcessorCount / 2);
             txtCores = MakeTextBox(secCpu, 110, 10, 60, defaultCores.ToString());
@@ -435,7 +435,7 @@ namespace WINQ_EMU
             page.AutoScroll = true;
             tabs.TabPages.Add(page);
 
-            var secFolders = MakeSection("SHARED FOLDERS (9P / VIRTFS)", page, 12, 260);
+            var secFolders = MakeSection("SHARED FOLDERS (9P / VIRTFS)", page, 12, 400);
 
             dgvFolders = new DataGridView
             {
@@ -490,7 +490,8 @@ namespace WINQ_EMU
                        "  mapped — same as mapped-xattr but may work on non-NTFS paths (limited)\n" +
                        "  passthrough / none — host uid/mode used as-is (minimal mapping)",
                 Location = new Point(14, 212),
-                Size = new Size(640, 80),
+                AutoSize = true,
+                MaximumSize = new Size(640, 0),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 ForeColor = Color.FromArgb(100, 100, 100),
                 Font = new Font("Consolas", 8.5f)
@@ -505,7 +506,7 @@ namespace WINQ_EMU
             page.BackColor = Color.FromArgb(245, 245, 248);
             tabs.TabPages.Add(page);
 
-            var secVaapi = MakeSection("HARDWARE VIDEO DECODE (VA-API)", page, 12, 200);
+            var secVaapi = MakeSection("HARDWARE VIDEO DECODE (VA-API)", page, 12, 280);
 
             chkVaapi = new CheckBox
             {

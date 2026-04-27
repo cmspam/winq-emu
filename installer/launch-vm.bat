@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  WINQ-EMU Alpha 9 - VM Launcher
+REM  WINQ-EMU Alpha 10 - VM Launcher
 REM
 REM  Launches a Linux VM with:
 REM    - WHPX hardware acceleration (-cpu host)

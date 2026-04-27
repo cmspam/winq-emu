@@ -116,9 +116,20 @@ Firefox and every non-Chromium consumer tested above work correctly.
 
 ## Status
 
-**Alpha 9** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
+**Alpha 10** - It works, it's fast, but expect some rough edges. Stability improvements are ongoing.
 
-### What's New in Alpha 9
+### What's New in Alpha 10
+- **WHPX `IA32_PAT` MSR sync** — Linux uses PAT to mark virtio-gpu / Venus shared memory as Write-Combining. Previously the partition's PAT was not synchronised with the guest, so the guest's MTRR/PAT cache-type computation could fall back to UC for memory that should be WC. Vulkan/OpenGL workloads that move significant GPU memory should be measurably faster on alpha 10.
+- **`WHvAdviseGpaRange(Pin)` for large RAM regions (Windows 11 24H2+)** — pin SLAT entries for the base RAM and the Venus 4 GiB hostmem region so the hypervisor doesn't demote 2 MiB / 1 GiB pages to 4 KiB under host memory pressure. Removes a "60 fps → 30 fps with no apparent cause" cliff under heavy graphics.
+- **5 ms cap on the WHPX inner exit loop** — a guest spinning through cheap MMIO/CPUID/MSR exits during a Vulkan submit storm could keep a vCPU thread inside the hypervisor for tens of ms, blocking the QEMU main loop. Smoother frame pacing under heavy graphics.
+- **`UnimplementedMsrAction = IgnoreWriteReadZero` (Windows 11 24H2+)** — Linux probes a couple hundred MSRs at boot that we don't implement. Each used to be a full WHPX exit just to be told "0". Now the hypervisor zero-reads them in-kernel. Slightly faster boot, lower steady-state overhead.
+- **`FastHypercallOutput` for x86** — every Hyper-V hypercall (TLB shootdown, IPI cluster) returns via registers instead of a guest-physical output page. Removes one mapping fault per hypercall.
+- **`VkAccelerationStructureKHR` deferred destroy on Windows** — extends the Intel-ICD-handle-recycle workaround to ray-tracing AS handles. RT games (Quake II RTX, Portal RTX, vkd3d-proton) destroy and recreate AS every frame as TLAS rebuilds.
+- **Multi-disk support in the launcher** — the Disk Image section is now a table of (Path, Format, Interface) rows. Add as many qcow2/raw images as you want; pick virtio / scsi / ide per disk. The first disk boots by default. Exported `.bat` files round-trip multiple `-drive` lines.
+- **`WINQ_DIAG=1` umbrella diagnostic flag** — one switch turns on every existing per-module diagnostic stream and routes the log to `%LOCALAPPDATA%\winq-emu\virglrenderer.log`. Replaces the `VIRGL_VIDEO_DIAG` / `VIRGL_VIDEO_D3D11_DEBUG` / `VIRGL_LOG_FILE` / `VIRGL_LOG_LEVEL` matrix when capturing a bug report.
+- **Four upstream virglrenderer fixes** cherry-picked: NULL-resource deref in `virgl_renderer_resource_map_fixed` (guest-triggerable crash), `vrend_renderer_init` cleanup order on init failure, `vkr_allocator` instance NULL on `vkCreateInstance` failure, cursor orientation `Y_0_TOP` flip.
+
+### What Was New in Alpha 9
 - **Vulkan WSI no longer stalls the dispatcher per frame.** The host's `vkWaitSemaphoreResourceMESA` and `vkResetFenceResourceMESA` paths used to do synchronous GPU waits and expensive Win32 handle export/close ceremonies on every guest WSI present. They now match Linux's non-blocking semantics — the dispatcher returns immediately and lets the GPU consume the semaphore signal in the background. This was a real per-frame stall on every Vulkan game and Wayland workload.
 - **Sub-millisecond Windows timer resolution.** `virgl_renderer_init` now sets `timeBeginPeriod(1)` and `vkr_ring_relax` uses `CreateWaitableTimerEx HIGH_RESOLUTION` for sub-millisecond delays. Without these, the ring monitor's microsecond-scale sleeps were rounded up to the 15.625ms system timer tick — the dispatcher would oversleep into the next frame, missing a whole burst of guest commands.
 - **Ring + queue threads register with MMCSS ("Pro Audio").** The two latency-sensitive worker threads now get longer time slices and are less likely to be preempted by background work. Reduces frame-time jitter on Vulkan workloads.

@@ -21,9 +21,11 @@ namespace WINQ_EMU
         // --- Controls ---
         TabControl tabs;
         // VM tab
-        TextBox txtDiskImage, txtIsoImage, txtCores, txtRam;
+        DataGridView dgvDisks;
+        Button btnAddDisk, btnBrowseDisk, btnCreateDisk, btnRemoveDisk;
+        TextBox txtIsoImage, txtCores, txtRam;
         ComboBox cmbBootDevice;
-        Button btnBrowseDisk, btnCreateDisk, btnBrowseIso, btnClearIso;
+        Button btnBrowseIso, btnClearIso;
         // Display tab
         CheckBox chkVenus;
         TextBox txtHostMem;
@@ -68,7 +70,7 @@ namespace WINQ_EMU
 
         void InitializeForm()
         {
-            Text = "WINQ-EMU Alpha 9";
+            Text = "WINQ-EMU Alpha 10";
             Size = new Size(780, 680);
             MinimumSize = new Size(700, 600);
             StartPosition = FormStartPosition.CenterScreen;
@@ -204,31 +206,73 @@ namespace WINQ_EMU
             page.AutoScroll = true;
             tabs.TabPages.Add(page);
 
-            // Disk Image section
-            var secDisk = MakeSection("DISK IMAGE", page, 12, 72);
-            MakeLabel("Image:", secDisk, 14, 10);
-            txtDiskImage = MakeTextBox(secDisk, 75, 8, 380);
-            btnBrowseDisk = MakeButton("Browse...", secDisk, 464, 7, 80, BrowseDisk_Click);
-            btnCreateDisk = MakeButton("Create New...", secDisk, 550, 7, 105, CreateDisk_Click);
-            MakeLabel("Supports qcow2 and raw formats", secDisk, 75, 38);
+            // Disk Images section (multi-disk)
+            var secDisk = MakeSection("DISK IMAGES", page, 12, 200);
+            dgvDisks = new DataGridView
+            {
+                Location = new Point(14, 8),
+                Size = new Size(640, 130),
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                AllowUserToAddRows = false,
+                AllowUserToResizeRows = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                Font = new Font("Segoe UI", 9f)
+            };
+            dgvDisks.Columns.Add("Path", "Disk Image (Path)");
+            var fmtCol = new DataGridViewComboBoxColumn
+            {
+                HeaderText = "Format",
+                Name = "Format",
+                DataSource = new[] { "auto", "qcow2", "raw" }
+            };
+            dgvDisks.Columns.Add(fmtCol);
+            var ifCol = new DataGridViewComboBoxColumn
+            {
+                HeaderText = "Interface",
+                Name = "Interface",
+                DataSource = new[] { "virtio", "scsi", "ide" }
+            };
+            dgvDisks.Columns.Add(ifCol);
+            dgvDisks.Columns[0].FillWeight = 70;
+            dgvDisks.Columns[1].FillWeight = 15;
+            dgvDisks.Columns[2].FillWeight = 15;
+            dgvDisks.CellEndEdit += (s, e) => UpdateCommandPreview();
+            dgvDisks.RowsAdded += (s, e) => UpdateCommandPreview();
+            dgvDisks.RowsRemoved += (s, e) => UpdateCommandPreview();
+            secDisk.Controls.Add(dgvDisks);
+
+            btnAddDisk = MakeButton("Add", secDisk, 14, 146, 80, AddDisk_Click);
+            btnBrowseDisk = MakeButton("Browse...", secDisk, 100, 146, 90, BrowseDisk_Click);
+            btnCreateDisk = MakeButton("Create New...", secDisk, 196, 146, 105, CreateDisk_Click);
+            btnRemoveDisk = MakeButton("Remove", secDisk, 307, 146, 80, RemoveDisk_Click);
+            MakeLabel("Browse picks a file for the selected row. Create New makes a new qcow2.",
+                      secDisk, 14, 174);
             secDisk.Controls[secDisk.Controls.Count - 1].ForeColor = Color.FromArgb(140, 140, 140);
             ((Label)secDisk.Controls[secDisk.Controls.Count - 1]).Font = new Font("Segoe UI", 8.5f);
+            // Start with one empty row so users see the format/interface defaults
+            // without having to click Add first.
+            dgvDisks.Rows.Add("", "auto", "virtio");
 
             // ISO / CD-ROM section
-            var secIso = MakeSection("CD-ROM / ISO", page, 112, 44);
+            var secIso = MakeSection("CD-ROM / ISO", page, 224, 44);
             MakeLabel("ISO:", secIso, 14, 10);
             txtIsoImage = MakeTextBox(secIso, 75, 8, 380);
             btnBrowseIso = MakeButton("Browse...", secIso, 464, 7, 80, BrowseIso_Click);
             btnClearIso = MakeButton("Clear", secIso, 550, 7, 60, (s, e) => { txtIsoImage.Text = ""; });
 
             // Boot Device section
-            var secBoot = MakeSection("BOOT", page, 184, 44);
+            var secBoot = MakeSection("BOOT", page, 296, 44);
             MakeLabel("Boot device:", secBoot, 14, 10);
             cmbBootDevice = MakeComboBox(secBoot, 110, 8, 180,
                 new[] { "Hard Disk (default)", "CD-ROM", "Network (PXE)" }, 0);
 
             // CPU & RAM section
-            var secCpu = MakeSection("CPU & MEMORY", page, 256, 50);
+            var secCpu = MakeSection("CPU & MEMORY", page, 368, 50);
             MakeLabel("CPU cores:", secCpu, 14, 12);
             int defaultCores = Math.Max(1, Environment.ProcessorCount / 2);
             txtCores = MakeTextBox(secCpu, 110, 10, 60, defaultCores.ToString());
@@ -573,7 +617,7 @@ namespace WINQ_EMU
             statusBar = new StatusStrip();
             statusLabel = new ToolStripStatusLabel("Ready");
             statusBar.Items.Add(statusLabel);
-            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 9") {
+            statusBar.Items.Add(new ToolStripStatusLabel("WINQ-EMU Alpha 10") {
                 Alignment = ToolStripItemAlignment.Right,
                 ForeColor = Color.FromArgb(140, 140, 140)
             });
@@ -604,11 +648,19 @@ namespace WINQ_EMU
                 ram = 4;
             args.Add("-m " + ram + "G");
 
-            string disk = txtDiskImage.Text.Trim();
-            if (disk.Length > 0)
+            foreach (DataGridViewRow row in dgvDisks.Rows)
             {
-                string fmt = disk.EndsWith(".qcow2", StringComparison.OrdinalIgnoreCase) ? "qcow2" : "raw";
-                args.Add("-drive file=\"" + disk + "\",format=" + fmt + ",if=virtio");
+                string path = (row.Cells[0].Value ?? "").ToString().Trim();
+                if (path.Length == 0) continue;
+                string fmt = (row.Cells[1].Value ?? "auto").ToString();
+                if (fmt == "auto" || fmt.Length == 0)
+                {
+                    fmt = path.EndsWith(".qcow2", StringComparison.OrdinalIgnoreCase)
+                          ? "qcow2" : "raw";
+                }
+                string iface = (row.Cells[2].Value ?? "virtio").ToString();
+                if (iface.Length == 0) iface = "virtio";
+                args.Add("-drive file=\"" + path + "\",format=" + fmt + ",if=" + iface);
             }
 
             string iso = txtIsoImage.Text.Trim();
@@ -710,14 +762,52 @@ namespace WINQ_EMU
         }
 
         // --- Event Handlers ---
+        DataGridViewRow CurrentDiskRow()
+        {
+            if (dgvDisks.SelectedRows.Count > 0)
+                return dgvDisks.SelectedRows[0];
+            if (dgvDisks.CurrentRow != null)
+                return dgvDisks.CurrentRow;
+            return null;
+        }
+
+        int AddDiskRow(string path)
+        {
+            int idx = dgvDisks.Rows.Add(path ?? "", "auto", "virtio");
+            dgvDisks.ClearSelection();
+            dgvDisks.Rows[idx].Selected = true;
+            UpdateCommandPreview();
+            return idx;
+        }
+
+        void AddDisk_Click(object sender, EventArgs e)
+        {
+            AddDiskRow("");
+        }
+
+        void RemoveDisk_Click(object sender, EventArgs e)
+        {
+            var row = CurrentDiskRow();
+            if (row == null) return;
+            dgvDisks.Rows.Remove(row);
+            UpdateCommandPreview();
+        }
+
         void BrowseDisk_Click(object sender, EventArgs e)
         {
             using (var ofd = new OpenFileDialog())
             {
                 ofd.Title = "Select VM Disk Image";
                 ofd.Filter = "Disk Images|*.qcow2;*.raw;*.img|All Files|*.*";
-                if (ofd.ShowDialog() == DialogResult.OK)
-                    txtDiskImage.Text = ofd.FileName;
+                if (ofd.ShowDialog() != DialogResult.OK) return;
+                var row = CurrentDiskRow();
+                if (row == null)
+                    AddDiskRow(ofd.FileName);
+                else
+                {
+                    row.Cells[0].Value = ofd.FileName;
+                    UpdateCommandPreview();
+                }
             }
         }
 
@@ -726,7 +816,7 @@ namespace WINQ_EMU
             using (var dlg = new CreateDiskDialog(qemuBinDir))
             {
                 if (dlg.ShowDialog() == DialogResult.OK)
-                    txtDiskImage.Text = dlg.CreatedPath;
+                    AddDiskRow(dlg.CreatedPath);
             }
         }
 
@@ -793,11 +883,16 @@ namespace WINQ_EMU
 
         void Launch_Click(object sender, EventArgs e)
         {
-            string disk = txtDiskImage.Text.Trim();
-            string iso = txtIsoImage.Text.Trim();
-            if ((disk.Length == 0 || !File.Exists(disk)) && (iso.Length == 0 || !File.Exists(iso)))
+            bool anyDisk = false;
+            foreach (DataGridViewRow row in dgvDisks.Rows)
             {
-                MessageBox.Show("Please select a disk image or ISO first.", "WINQ-EMU",
+                string p = (row.Cells[0].Value ?? "").ToString().Trim();
+                if (p.Length > 0 && File.Exists(p)) { anyDisk = true; break; }
+            }
+            string iso = txtIsoImage.Text.Trim();
+            if (!anyDisk && (iso.Length == 0 || !File.Exists(iso)))
+            {
+                MessageBox.Show("Please add at least one disk image or ISO first.", "WINQ-EMU",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -838,7 +933,7 @@ namespace WINQ_EMU
                 {
                     var sb = new StringBuilder();
                     sb.AppendLine("@echo off");
-                    sb.AppendLine("REM WINQ-EMU Alpha 9 - Generated VM Configuration");
+                    sb.AppendLine("REM WINQ-EMU Alpha 10 - Generated VM Configuration");
                     sb.AppendLine("REM " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
                     sb.AppendLine();
                     if (chkVaapi != null && chkVaapi.Checked)
@@ -883,8 +978,18 @@ namespace WINQ_EMU
             string cmd = content.Replace("^\r\n", " ").Replace("^\n", " ");
             cmd = Regex.Replace(cmd, @"\s+", " ");
 
-            var diskMatch = Regex.Match(cmd, @"-drive\s+file=""?([^"",]+)""?");
-            if (diskMatch.Success) txtDiskImage.Text = diskMatch.Groups[1].Value;
+            dgvDisks.Rows.Clear();
+            var diskMatches = Regex.Matches(cmd,
+                @"-drive\s+file=""?([^"",]+)""?(?:,format=([a-z0-9]+))?(?:,if=([a-z0-9]+))?");
+            foreach (Match m in diskMatches)
+            {
+                string p = m.Groups[1].Value;
+                string fmt = m.Groups[2].Success ? m.Groups[2].Value : "auto";
+                string iface = m.Groups[3].Success ? m.Groups[3].Value : "virtio";
+                if (fmt != "qcow2" && fmt != "raw") fmt = "auto";
+                if (iface != "virtio" && iface != "scsi" && iface != "ide") iface = "virtio";
+                dgvDisks.Rows.Add(p, fmt, iface);
+            }
 
             var isoMatch = Regex.Match(cmd, @"-cdrom\s+""?([^""]+)""?");
             if (isoMatch.Success) txtIsoImage.Text = isoMatch.Groups[1].Value;

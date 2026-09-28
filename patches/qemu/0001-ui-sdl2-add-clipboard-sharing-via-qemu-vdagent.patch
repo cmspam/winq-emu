@@ -1,0 +1,304 @@
+From bfed1ef4d205b21da086dfe8e5881f1b1a74c787 Mon Sep 17 00:00:00 2001
+From: Suhaas Borra <mehersuhaas123@gmail.com>
+Date: Tue, 25 Aug 2026 12:09:03 +0530
+Subject: [PATCH] ui/sdl2: add clipboard sharing via qemu-vdagent
+
+Adds ui/sdl2-clipboard.c, a host-clipboard <-> qemu-vdagent bridge for
+the SDL display, mirroring what ui/gtk-clipboard.c does for GTK (SDL
+never got this upstream, see QEMU issue #471). Enables --enable-spice
+in build.sh to compile the qemu-vdagent chardev backend; no -spice
+display/network port is opened at runtime.
+
+Verified end-to-end: qemu-vdagent capability handshake completes, the
+clipboard-grab message reaches the guest, and xclip confirms both
+directions work at the X11 layer. Native Wayland guest apps under
+niri are not yet reached -- that gap is in spice-vdagent (X11-only
+clipboard implementation) and xwayland-satellite (no X11-to-native-
+Wayland clipboard bridge), not in this fork.
+---
+ README.md           |  24 ++++++++-
+ build.sh            |   3 +-
+ include/ui/sdl2.h   |   4 ++
+ ui/meson.build      |   1 +
+ ui/sdl2-clipboard.c | 127 ++++++++++++++++++++++++++++++++++++++++++++
+ ui/sdl2.c           |   5 ++
+ 6 files changed, 161 insertions(+), 3 deletions(-)
+ create mode 100644 ui/sdl2-clipboard.c
+
+diff --git a/README.md b/README.md
+index 28fa728d0b..a00727a878 100644
+--- a/README.md
++++ b/README.md
+@@ -24,6 +24,7 @@ All changes are applied as a series of commits on top of upstream `v11.0.0`, mak
+ - **USB tablet fix**: Deferred mouse mode changes to SDL thread to prevent freezes on Windows
+ - **EGL guard**: Prevents crash on systems without EGL
+ - **DPI awareness**: Per-monitor DPI aware on Windows
++- **Clipboard support** (`ui/sdl2-clipboard.c`): Bridges the SDL display's host clipboard with QEMU's internal clipboard manager, the same way `ui/gtk-clipboard.c` does for the GTK UI — upstream never added this for SDL (see [QEMU issue #471](https://gitlab.com/qemu-project/qemu/-/work_items/471)). Lets a `qemu-vdagent` chardev peer exchange clipboard text with the guest over virtio-serial while still running `-display sdl`; no QXL, no `-spice` network/display port, no separate SPICE client. See [Clipboard Sharing](#clipboard-sharing) below.
+ 
+ ### virtio-9p Folder Sharing on Windows
+ - **Windows 9pfs port**: Enables `-virtfs local,...` on Windows hosts so the GUI launcher's Folder Sharing tab can map Windows folders into the Linux guest. Based on the v4 patches by Bin Meng, with audit-cited correctness fixes.
+@@ -32,7 +33,7 @@ All changes are applied as a series of commits on top of upstream `v11.0.0`, mak
+ - **virgl_video acceleration**: `virtio-gpu-virgl` is built with `virgl_video` enabled so the guest's Mesa Gallium VA driver routes decode requests to the host's D3D11 video decoder (in the matching `winq-emu-virglrenderer`).
+ 
+ ### Build Configuration
+-- Includes a build script preconfigured for MSYS2 UCRT64 with OpenGL, virglrenderer, slirp, virtio-9p, and WHPX enabled
++- Includes a build script preconfigured for MSYS2 UCRT64 with OpenGL, virglrenderer, slirp, virtio-9p, SPICE, and WHPX enabled
+ 
+ ## Building
+ 
+@@ -47,9 +48,12 @@ pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-meson \
+           mingw-w64-ucrt-x86_64-SDL2 mingw-w64-ucrt-x86_64-libepoxy \
+           mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-dtc \
+           mingw-w64-ucrt-x86_64-zstd mingw-w64-ucrt-x86_64-libslirp \
++          mingw-w64-ucrt-x86_64-spice \
+           git diffutils
+ ```
+ 
++**Note**: `mingw-w64-ucrt-x86_64-spice` pulls a real dependency chain (nss, gstreamer, libcacard, ~20 packages). It is only needed to compile the `qemu-vdagent` chardev backend (`chardev/spice.c`) for clipboard support — no `-spice` network/display port is ever opened at runtime.
++
+ **Important**: The `git` and `diffutils` packages (from the MSYS2 base, not the mingw-w64 variants) are required — QEMU's meson build needs `git` to fetch subprojects and `diff` to run its test schema checks. Without these, configure will fail.
+ 
+ You also need [winq-emu-virglrenderer](https://github.com/cmspam/winq-emu-virglrenderer) built and installed to `/ucrt64` before building QEMU.
+@@ -64,7 +68,7 @@ Or manually:
+ 
+ ```bash
+ mkdir -p build && cd build
+-../configure --target-list=x86_64-softmmu --prefix=/ucrt64 --enable-whpx --enable-opengl --enable-virglrenderer --enable-slirp --disable-docs --disable-plugins
++../configure --target-list=x86_64-softmmu --prefix=/ucrt64 --enable-whpx --enable-opengl --enable-virglrenderer --enable-slirp --enable-spice --disable-docs --disable-plugins
+ ninja
+ ```
+ 
+@@ -86,6 +90,22 @@ qemu-system-x86_64.exe \
+   -netdev user,id=net0,hostfwd=tcp::2223-:22
+ ```
+ 
++## Clipboard Sharing
++
++Add these flags to share the clipboard between host and guest:
++
++```bash
++qemu-system-x86_64.exe \
++  ... \
++  -device virtio-serial-pci \
++  -chardev qemu-vdagent,id=vdagent,name=vdagent,clipboard=on \
++  -device virtserialport,chardev=vdagent,id=vdagent,name=com.redhat.spice.0
++```
++
++In the guest, install `spice-vdagent` (stock Ubuntu package: `apt install spice-vdagent`). It runs as both a system service (`spice-vdagentd`) and a per-session user service (`spice-vdagent`), started automatically once installed.
++
++**Current scope**: clipboard sync works correctly for any X11 or XWayland application in the guest (verified both directions with `xclip`). It does **not** yet reach native Wayland applications under niri. Root cause is guest-side, not this fork: `spice-vdagent`'s clipboard implementation is X11-selection-only (`XConvertSelection`, no `wlr-data-control` support at all — confirmed via `strings` on the binary), and niri's XWayland provider (`xwayland-satellite`) does not bridge that X11 selection into niri's native Wayland clipboard the way GNOME's Mutter does internally for its own embedded Xwayland. Fixing this would mean patching `xwayland-satellite` or niri, not QEMU — out of scope for this repo.
++
+ ## Syncing with Upstream
+ 
+ This fork tracks [QEMU upstream](https://gitlab.com/qemu-project/qemu). All custom changes are in a single commit on top of the upstream tag, so rebasing is straightforward:
+diff --git a/build.sh b/build.sh
+index b9ecd7cae8..a9fd2897c0 100644
+--- a/build.sh
++++ b/build.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ # Build WINQ-EMU QEMU in MSYS2 UCRT64 environment
+-# Prerequisites: pacman -S mingw-w64-ucrt-x86_64-{gcc,meson,ninja,pkg-config,glib2,pixman,SDL2,libepoxy,virglrenderer}
++# Prerequisites: pacman -S mingw-w64-ucrt-x86_64-{gcc,meson,ninja,pkg-config,glib2,pixman,SDL2,libepoxy,virglrenderer,spice}
+ set -e
+ mkdir -p build
+ cd build
+@@ -11,6 +11,7 @@ cd build
+     --enable-opengl \
+     --enable-virglrenderer \
+     --enable-slirp \
++    --enable-spice \
+     --disable-docs \
+     --disable-plugins \
+     2>&1
+diff --git a/include/ui/sdl2.h b/include/ui/sdl2.h
+index ce09b280bf..6175f16a9e 100644
+--- a/include/ui/sdl2.h
++++ b/include/ui/sdl2.h
+@@ -22,6 +22,7 @@
+ #endif
+ 
+ #include "ui/kbd-state.h"
++#include "ui/clipboard.h"
+ #ifdef CONFIG_OPENGL
+ # include "ui/egl-helpers.h"
+ #endif
+@@ -106,4 +107,7 @@ void sdl2_gl_release_dmabuf(DisplayChangeListener *dcl,
+ bool sdl2_gl_has_dmabuf(DisplayChangeListener *dcl);
+ void sdl2_gl_console_init(struct sdl2_console *scon);
+ 
++void sdl2_clipboard_init(void);
++void sdl2_clipboard_update(void);
++
+ #endif /* SDL2_H */
+diff --git a/ui/meson.build b/ui/meson.build
+index 69404bca71..83f8d3803d 100644
+--- a/ui/meson.build
++++ b/ui/meson.build
+@@ -125,6 +125,7 @@ if sdl.found()
+     'sdl2-2d.c',
+     'sdl2-input.c',
+     'sdl2.c',
++    'sdl2-clipboard.c',
+   ))
+   sdl_ss.add(when: opengl, if_true: files('sdl2-gl.c'))
+   sdl_ss.add(when: x11, if_true: files('x_keymap.c'))
+diff --git a/ui/sdl2-clipboard.c b/ui/sdl2-clipboard.c
+new file mode 100644
+index 0000000000..ffd0611135
+--- /dev/null
++++ b/ui/sdl2-clipboard.c
+@@ -0,0 +1,127 @@
++/*
++ * SDL UI -- clipboard support
++ *
++ * Bridges the SDL2 display's host clipboard with the qemu internal
++ * clipboard manager (ui/clipboard.c), the same way ui/gtk-clipboard.c
++ * does for the GTK UI. This lets a chardev peer such as qemu-vdagent
++ * exchange clipboard text with a guest over virtio-serial while
++ * running -display sdl.
++ *
++ * SDL's clipboard API has no delayed-render / lazy provider mechanism
++ * like X11/GTK does, so the guest -> host direction pulls the data
++ * eagerly as soon as the guest grabs the qemu clipboard, instead of
++ * waiting for a host-side paste. The host -> guest direction stays
++ * lazy: the local clipboard text is only read when the guest actually
++ * requests it.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include "qemu/osdep.h"
++#include "ui/sdl2.h"
++
++static QemuClipboardPeer sdl2_cbpeer;
++static char *sdl2_synced_text;
++
++static void sdl2_clipboard_remember(const char *text)
++{
++    g_free(sdl2_synced_text);
++    sdl2_synced_text = g_strdup(text);
++}
++
++static void sdl2_clipboard_request(QemuClipboardInfo *info,
++                                    QemuClipboardType type)
++{
++    char *text;
++
++    if (type != QEMU_CLIPBOARD_TYPE_TEXT) {
++        return;
++    }
++
++    text = SDL_GetClipboardText();
++    if (text && text[0]) {
++        qemu_clipboard_set_data(&sdl2_cbpeer, info, type,
++                                strlen(text), text, true);
++    }
++    SDL_free(text);
++}
++
++static void sdl2_clipboard_notify(Notifier *notifier, void *data)
++{
++    QemuClipboardNotify *notify = data;
++    QemuClipboardInfo *info;
++
++    if (notify->type != QEMU_CLIPBOARD_UPDATE_INFO) {
++        return;
++    }
++
++    info = notify->info;
++    if (info->owner == &sdl2_cbpeer ||
++        info->selection != QEMU_CLIPBOARD_SELECTION_CLIPBOARD) {
++        return;
++    }
++    if (!info->types[QEMU_CLIPBOARD_TYPE_TEXT].available) {
++        return;
++    }
++
++    if (info->types[QEMU_CLIPBOARD_TYPE_TEXT].data) {
++        /* data arrived in response to our own request below */
++        sdl2_clipboard_remember(info->types[QEMU_CLIPBOARD_TYPE_TEXT].data);
++        SDL_SetClipboardText(info->types[QEMU_CLIPBOARD_TYPE_TEXT].data);
++        return;
++    }
++
++    /* a new peer just grabbed the clipboard, pull the actual text now */
++    qemu_clipboard_request(info, QEMU_CLIPBOARD_TYPE_TEXT);
++}
++
++void sdl2_clipboard_update(void)
++{
++    QemuClipboardInfo *info;
++    char *text;
++
++    if (qemu_clipboard_peer_owns(&sdl2_cbpeer,
++                                 QEMU_CLIPBOARD_SELECTION_CLIPBOARD)) {
++        return;
++    }
++    if (!SDL_HasClipboardText()) {
++        return;
++    }
++
++    text = SDL_GetClipboardText();
++    if (!text || !text[0]) {
++        SDL_free(text);
++        return;
++    }
++    if (sdl2_synced_text && strcmp(text, sdl2_synced_text) == 0) {
++        SDL_free(text);
++        return;
++    }
++
++    info = qemu_clipboard_info_new(&sdl2_cbpeer,
++                                   QEMU_CLIPBOARD_SELECTION_CLIPBOARD);
++    info->types[QEMU_CLIPBOARD_TYPE_TEXT].available = true;
++    qemu_clipboard_update(info);
++    qemu_clipboard_info_unref(info);
++
++    SDL_free(text);
++}
++
++void sdl2_clipboard_init(void)
++{
++    sdl2_cbpeer.name = "sdl";
++    sdl2_cbpeer.notifier.notify = sdl2_clipboard_notify;
++    sdl2_cbpeer.request = sdl2_clipboard_request;
++    qemu_clipboard_peer_register(&sdl2_cbpeer);
++}
+diff --git a/ui/sdl2.c b/ui/sdl2.c
+index c7f177666c..2d53292cdf 100644
+--- a/ui/sdl2.c
++++ b/ui/sdl2.c
+@@ -707,6 +707,9 @@ void sdl2_poll_events(struct sdl2_console *scon)
+             idle = 0;
+             handle_textinput(ev);
+             break;
++        case SDL_CLIPBOARDUPDATE:
++            sdl2_clipboard_update();
++            break;
+         case SDL_QUIT:
+             if (scon->opts->has_window_close && !scon->opts->window_close) {
+                 allow_close = false;
+@@ -1034,6 +1037,8 @@ static void sdl2_display_init(DisplayState *ds, DisplayOptions *o)
+ 
+     atexit(sdl_cleanup);
+ 
++    sdl2_clipboard_init();
++
+     /* SDL's event polling (in dpy_refresh) must happen on the main thread. */
+     qemu_main = NULL;
+ }
+-- 
+2.54.0.windows.1
+

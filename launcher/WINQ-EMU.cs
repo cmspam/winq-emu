@@ -35,6 +35,7 @@ namespace WINQ_EMU
         ComboBox cmbSound, cmbNetwork;
         DataGridView dgvPorts;
         Button btnAddPort, btnRemovePort;
+        CheckBox chkClipboard;
         // Folder Sharing tab
         DataGridView dgvFolders;
         Button btnAddFolder, btnRemoveFolder, btnBrowseFolder;
@@ -425,6 +426,31 @@ namespace WINQ_EMU
                 Font = new Font("Segoe UI", 8.5f)
             };
             secPorts.Controls.Add(lblPortNote);
+
+            // Clipboard section
+            var secClipboard = MakeSection("CLIPBOARD", page, 364, 76);
+            chkClipboard = new CheckBox
+            {
+                Text = "Share clipboard with guest (SPICE vdagent)",
+                Location = new Point(14, 10),
+                AutoSize = true,
+                Checked = false,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            chkClipboard.CheckedChanged += (s, e) => UpdateCommandPreview();
+            secClipboard.Controls.Add(chkClipboard);
+
+            var lblClipboardNote = new Label
+            {
+                Text = "Install spice-vdagent in the guest (apt/dnf/pacman install spice-vdagent).\n" +
+                       "Works with X11/XWayland guest apps. Native Wayland apps under some\n" +
+                       "compositors (e.g. niri) need the compositor's own X11-clipboard bridge.",
+                Location = new Point(14, 38),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(100, 100, 100),
+                Font = new Font("Segoe UI", 8.5f)
+            };
+            secClipboard.Controls.Add(lblClipboardNote);
         }
 
         // --- Folder Sharing Tab ---
@@ -710,6 +736,13 @@ namespace WINQ_EMU
 
             args.Add("-usb");
             args.Add("-device usb-tablet");
+
+            if (chkClipboard.Checked)
+            {
+                args.Add("-device virtio-serial-pci");
+                args.Add("-chardev qemu-vdagent,id=vdagent,name=vdagent,clipboard=on");
+                args.Add("-device virtserialport,chardev=vdagent,id=vdagent,name=com.redhat.spice.0");
+            }
 
             // Folder sharing via virtio-9p.
             int fsIdx = 0;
@@ -1025,6 +1058,8 @@ namespace WINQ_EMU
             if (cmd.Contains("virtio-net")) cmbNetwork.SelectedIndex = 0;
             else if (cmd.Contains("e1000")) cmbNetwork.SelectedIndex = 1;
             else cmbNetwork.SelectedIndex = 2;
+
+            chkClipboard.Checked = cmd.Contains("qemu-vdagent");
 
             dgvPorts.Rows.Clear();
             portForwards.Clear();

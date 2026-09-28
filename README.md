@@ -36,6 +36,7 @@ SuperTuxKart, Vulkan renderer, default settings, CachyOS on both:
 - **OpenGL**: Works everywhere via virgl (GL forwarding)
 - **Zink (GL-over-Vulkan)**: Works on Wayland and X11/XWayland
 - **Folder sharing**: virtio-9p host ↔ guest folders via the GUI launcher's Folder Sharing tab
+- **Clipboard sharing**: host ↔ guest clipboard via SPICE vdagent. Enable from the Devices tab; requires `spice-vdagent` installed in the guest. Works with X11/XWayland guest apps out of the box — native Wayland apps under some compositors (e.g. niri) additionally need the compositor's own X11-clipboard bridge, which is outside this project's scope.
 - **Hardware video decode (experimental)**: VA-API for H.264, HEVC (Main / Main10), VP9 (Profile 0 / Profile 2), AV1 — routed through the host GPU's DXVA pipeline. Opt-in from the Experimental tab.
 
 **Important**: Use BIOS boot, not EFI. EFI boot causes a timing issue that tanks Vulkan performance to ~5 FPS.

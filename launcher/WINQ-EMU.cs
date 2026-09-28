@@ -1053,12 +1053,12 @@ namespace WINQ_EMU
             foreach (Match m in fsdevMatches)
             {
                 string id = m.Groups[1].Value;
-                string path = m.Groups[2].Value.Trim('"');
-                string sec = m.Groups[3].Value.TrimEnd(',');
+                string path = m.Groups[2].Value.Trim(new char[] { '"' });
+                string sec = m.Groups[3].Value.TrimEnd(new char[] { ',' });
                 // Find mount_tag from the matching -device line.
                 var tagMatch = Regex.Match(cmd,
                     @"-device\s+virtio-9p-pci,\s*fsdev=" + Regex.Escape(id) + @",\s*mount_tag=(\S+)");
-                string tag = tagMatch.Success ? tagMatch.Groups[1].Value.TrimEnd(',') : "shared";
+                string tag = tagMatch.Success ? tagMatch.Groups[1].Value.TrimEnd(new char[] { ',' }) : "shared";
                 dgvFolders.Rows.Add(path, tag, sec);
                 sharedFolders.Add(new SharedFolder { HostPath = path, MountTag = tag, SecurityModel = sec });
             }

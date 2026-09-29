@@ -30,6 +30,7 @@ namespace WINQ_EMU
         TextBox txtIsoImage, txtCores, txtRam;
         ComboBox cmbBootDevice;
         CheckBox chkEfi;
+        Label lblEfiVars;
         Button btnBrowseIso, btnClearIso;
         // Display tab
         CheckBox chkVenus;
@@ -285,6 +286,15 @@ namespace WINQ_EMU
             };
             chkEfi.CheckedChanged += (s, e) => UpdateCommandPreview();
             secBoot.Controls.Add(chkEfi);
+
+            lblEfiVars = new Label
+            {
+                Location = new Point(14, 30),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(120, 120, 120),
+                Font = new Font("Segoe UI", 8.5f)
+            };
+            secBoot.Controls.Add(lblEfiVars);
 
             // CPU & RAM section
             var secCpu = MakeSection("CPU & MEMORY", page, 364, 50);
@@ -670,11 +680,13 @@ namespace WINQ_EMU
 
         // Create the EFI vars file (4 MB blank NVRAM template) only when it does
         // not already exist. Called from Launch, never from preview/import/save.
-        void EnsureEfivarsFile()
+        // Returns the path used; createdNew is true when a fresh file was made.
+        string EnsureEfivarsFile(out bool createdNew)
         {
-            if (chkEfi == null || !chkEfi.Checked) return;
+            createdNew = false;
+            if (chkEfi == null || !chkEfi.Checked) return null;
             string varsFd = ComputeEfivarsPath();
-            if (varsFd == null) return;
+            if (varsFd == null) return null;
             if (!File.Exists(varsFd))
             {
                 try
@@ -683,9 +695,11 @@ namespace WINQ_EMU
                     if (dir.Length > 0) Directory.CreateDirectory(dir);
                     using (var fs = new FileStream(varsFd, FileMode.Create, FileAccess.Write))
                         fs.SetLength(4L * 1024 * 1024);
+                    createdNew = true;
                 }
                 catch { }
             }
+            return varsFd;
         }
 
         List<string> BuildArgs()
@@ -849,6 +863,23 @@ namespace WINQ_EMU
         {
             if (txtCommandPreview != null)
                 txtCommandPreview.Text = BuildCommand(false);
+            UpdateEfiVarsLabel();
+        }
+
+        // Surface the resolved EFI NVRAM (efivars.fd) path so the side effect
+        // of auto-creating it is never hidden from the user.
+        void UpdateEfiVarsLabel()
+        {
+            if (lblEfiVars == null) return;
+            if (chkEfi == null || !chkEfi.Checked)
+            {
+                lblEfiVars.Text = "NVRAM: (EFI boot off)";
+                return;
+            }
+            string p = ComputeEfivarsPath();
+            if (p == null) { lblEfiVars.Text = "NVRAM: (add a disk first)"; return; }
+            lblEfiVars.Text = "NVRAM: " + p +
+                (File.Exists(p) ? "" : "  (created on launch)");
         }
 
         // --- Event Handlers ---
@@ -990,7 +1021,8 @@ namespace WINQ_EMU
             try
             {
                 string qemuExe = Path.Combine(qemuBinDir, "qemu-system-x86_64w.exe");
-                EnsureEfivarsFile();
+                bool createdNvram;
+                string nvramPath = EnsureEfivarsFile(out createdNvram);
                 string flatArgs = string.Join(" ", BuildArgs());
 
                 var psi = new ProcessStartInfo
@@ -1003,7 +1035,9 @@ namespace WINQ_EMU
                 if (chkVaapi != null && chkVaapi.Checked)
                     psi.EnvironmentVariables["WINQ_VAAPI"] = "1";
                 Process.Start(psi);
-                statusLabel.Text = "VM launched.";
+                statusLabel.Text = (createdNvram && nvramPath != null)
+                    ? "Created new EFI NVRAM: " + nvramPath
+                    : "VM launched.";
             }
             catch (Exception ex)
             {

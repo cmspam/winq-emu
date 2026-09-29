@@ -16,6 +16,10 @@ namespace WINQ_EMU
         // --- State ---
         string qemuBinDir;
         List<PortForward> portForwards = new List<PortForward>();
+        // EFI vars (NVRAM) path. null = derive from the primary disk
+        // (<disk>-efivars.fd). Set by ParseBatFile when the imported .bat names
+        // an explicit pflash vars file, so that path is honored as-is.
+        string explicitEfivarsPath = null;
         List<SharedFolder> sharedFolders = new List<SharedFolder>();
 
         // --- Controls ---
@@ -25,6 +29,7 @@ namespace WINQ_EMU
         Button btnAddDisk, btnBrowseDisk, btnCreateDisk, btnRemoveDisk;
         TextBox txtIsoImage, txtCores, txtRam;
         ComboBox cmbBootDevice;
+        CheckBox chkEfi;
         Button btnBrowseIso, btnClearIso;
         // Display tab
         CheckBox chkVenus;
@@ -270,6 +275,16 @@ namespace WINQ_EMU
             MakeLabel("Boot device:", secBoot, 14, 10);
             cmbBootDevice = MakeComboBox(secBoot, 110, 8, 180,
                 new[] { "Hard Disk (default)", "CD-ROM", "Network (PXE)" }, 0);
+
+            chkEfi = new CheckBox
+            {
+                Text = "UEFI (EFI) boot — for EFI-installed guests",
+                Location = new Point(310, 10),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            chkEfi.CheckedChanged += (s, e) => UpdateCommandPreview();
+            secBoot.Controls.Add(chkEfi);
 
             // CPU & RAM section
             var secCpu = MakeSection("CPU & MEMORY", page, 364, 50);
@@ -633,6 +648,46 @@ namespace WINQ_EMU
         }
 
         // --- Command Building ---
+        // Resolve the EFI vars (NVRAM) file path. The vars file stores EFI
+        // boot entries and Secure Boot keys, so it MUST be per-VM: derive it
+        // from the primary disk's name (<disk>-efivars.fd). An explicitly
+        // imported .bat may name its own vars file, which takes precedence.
+        string ComputeEfivarsPath()
+        {
+            if (explicitEfivarsPath != null)
+                return explicitEfivarsPath;
+
+            string primary = null;
+            foreach (DataGridViewRow row in dgvDisks.Rows)
+            {
+                string path = (row.Cells[0].Value ?? "").ToString().Trim();
+                if (path.Length > 0) { primary = path; break; }
+            }
+            if (primary == null) return null;
+            return Path.Combine(Path.GetDirectoryName(primary),
+                                Path.GetFileNameWithoutExtension(primary) + "-efivars.fd");
+        }
+
+        // Create the EFI vars file (4 MB blank NVRAM template) only when it does
+        // not already exist. Called from Launch, never from preview/import/save.
+        void EnsureEfivarsFile()
+        {
+            if (chkEfi == null || !chkEfi.Checked) return;
+            string varsFd = ComputeEfivarsPath();
+            if (varsFd == null) return;
+            if (!File.Exists(varsFd))
+            {
+                try
+                {
+                    string dir = Path.GetDirectoryName(varsFd);
+                    if (dir.Length > 0) Directory.CreateDirectory(dir);
+                    using (var fs = new FileStream(varsFd, FileMode.Create, FileAccess.Write))
+                        fs.SetLength(4L * 1024 * 1024);
+                }
+                catch { }
+            }
+        }
+
         List<string> BuildArgs()
         {
             var args = new List<string>();
@@ -649,6 +704,7 @@ namespace WINQ_EMU
                 ram = 4;
             args.Add("-m " + ram + "G");
 
+            int diskIdx = 0;
             foreach (DataGridViewRow row in dgvDisks.Rows)
             {
                 string path = (row.Cells[0].Value ?? "").ToString().Trim();
@@ -661,7 +717,22 @@ namespace WINQ_EMU
                 }
                 string iface = (row.Cells[2].Value ?? "virtio").ToString();
                 if (iface.Length == 0) iface = "virtio";
-                args.Add("-drive file=\"" + path + "\",format=" + fmt + ",if=" + iface);
+                if (iface == "virtio")
+                {
+                    // Emit the disk as an explicit virtio-blk-pci device (matching
+                    // the .bat convention) instead of the deprecated "-drive
+                    // if=virtio" shortcut. The OVMF NVRAM boot entry records the
+                    // disk's PCI device path; an explicit device keeps that path
+                    // stable across re-launch so it doesn't drop to the EFI shell.
+                    string id = "hd" + diskIdx;
+                    args.Add("-drive if=none,id=" + id + ",file=\"" + path + "\",format=" + fmt);
+                    args.Add("-device virtio-blk-pci,drive=" + id + ",bootindex=" + (diskIdx + 1));
+                }
+                else
+                {
+                    args.Add("-drive file=\"" + path + "\",format=" + fmt + ",if=" + iface);
+                }
+                diskIdx++;
             }
 
             string iso = txtIsoImage.Text.Trim();
@@ -673,6 +744,24 @@ namespace WINQ_EMU
                 case 1: args.Add("-boot d"); break;
                 case 2: args.Add("-boot n"); break;
             }
+
+            // UEFI (EFI) boot via OVMF. Needed for EFI-installed guests; the
+            // default (unchecked) boots legacy SeaBIOS, which can't load an EFI
+            // bootloader off a disk installed in EFI mode.
+            if (chkEfi != null && chkEfi.Checked)
+            {
+                string codeFd = Path.Combine(qemuBinDir, "share", "edk2-x86_64-code.fd");
+                string varsFd = ComputeEfivarsPath();
+                if (varsFd == null)
+                    varsFd = Path.Combine(Path.GetDirectoryName(qemuBinDir), "vm", "efivars.fd");
+                args.Add("-drive if=pflash,format=raw,unit=0,readonly=on,file=\"" + codeFd + "\"");
+                args.Add("-drive if=pflash,format=raw,unit=1,file=\"" + varsFd + "\"");
+            }
+
+            // Disable the default std VGA (console 0) so SDL shows the
+            // virtio-vga-gl surface (console 1) instead of the
+            // "Display output is not active." placeholder.
+            args.Add("-vga none");
 
             if (chkVenus.Checked)
             {
@@ -901,6 +990,7 @@ namespace WINQ_EMU
             try
             {
                 string qemuExe = Path.Combine(qemuBinDir, "qemu-system-x86_64w.exe");
+                EnsureEfivarsFile();
                 string flatArgs = string.Join(" ", BuildArgs());
 
                 var psi = new ProcessStartInfo
@@ -980,13 +1070,21 @@ namespace WINQ_EMU
             cmd = Regex.Replace(cmd, @"\s+", " ");
 
             dgvDisks.Rows.Clear();
-            var diskMatches = Regex.Matches(cmd,
-                @"-drive\s+file=""?([^"",]+)""?(?:,format=([a-z0-9]+))?(?:,if=([a-z0-9]+))?");
-            foreach (Match m in diskMatches)
+            // Each -drive block is on its own logical line; match the block then
+            // extract file/format/if in any order (e.g. -drive if=none,id=hd0,
+            // file=... as well as -drive file=...,if=...). Skip pflash (firmware).
+            var driveSegs = Regex.Matches(cmd, @"-drive\b.*?(?=\s-|$)");
+            foreach (Match segM in driveSegs)
             {
-                string p = m.Groups[1].Value;
-                string fmt = m.Groups[2].Success ? m.Groups[2].Value : "auto";
-                string iface = m.Groups[3].Success ? m.Groups[3].Value : "virtio";
+                string seg = segM.Value;
+                if (seg.Contains("if=pflash")) continue;
+                var fM = Regex.Match(seg, @"file=""?([^"",]+)""?");
+                if (!fM.Success) continue;
+                string p = fM.Groups[1].Value;
+                var fmtM = Regex.Match(seg, @"format=([a-z0-9]+)");
+                string fmt = fmtM.Success ? fmtM.Groups[1].Value : "auto";
+                var ifM = Regex.Match(seg, @"if=([a-z0-9]+)");
+                string iface = ifM.Success ? ifM.Groups[1].Value : "virtio";
                 if (fmt != "qcow2" && fmt != "raw") fmt = "auto";
                 if (iface != "virtio" && iface != "scsi" && iface != "ide") iface = "virtio";
                 dgvDisks.Rows.Add(p, fmt, iface);
@@ -1007,6 +1105,23 @@ namespace WINQ_EMU
             if (ramMatch.Success) txtRam.Text = ramMatch.Groups[1].Value;
 
             chkVenus.Checked = cmd.Contains("venus=on");
+
+            if (chkEfi != null)
+                chkEfi.Checked = cmd.Contains("if=pflash") || cmd.Contains("edk2");
+
+            // Capture the .bat's own EFI vars (NVRAM) file so a re-launch honors
+            // it. Skip the readonly pflash unit (OVMF code). Only trust paths the
+            // launcher can actually resolve (no unexpanded %env% vars).
+            explicitEfivarsPath = null;
+            var pflashSegs = Regex.Matches(cmd, @"-drive\b.*?if=pflash.*?(?=\s-|$)");
+            foreach (Match pm in pflashSegs)
+            {
+                string seg = pm.Value;
+                if (seg.Contains("readonly=on")) continue;
+                var vf = Regex.Match(seg, @"file=""?([^"",]+)""?");
+                if (vf.Success && !vf.Groups[1].Value.Contains("%"))
+                    explicitEfivarsPath = vf.Groups[1].Value;
+            }
 
             var hmMatch = Regex.Match(cmd, @"hostmem=(\d+)G");
             if (hmMatch.Success)
